@@ -11,3 +11,5 @@ python3 ./base_code_lab_01/robot_python_code/lab01_gui.py
 ```
 
 ## Demo Video
+https://github.com/user-attachments/assets/0693a38c-7749-4c21-bd29-7ce8f97f2b1c
+

@@ -1,24 +1,33 @@
 name: UI Tests
 
-on: [push, pull_request]
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - devel
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
 
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install pytest nicegui playwrite opencv-python-headless
-          playwrite install chromium --with-deps
+      with:
+        python-version: ${{ matrix.python-version }}
 
-      - name: Run Tests with Xvfb
-        run: |
-          xvfb-run pytest tests/test_gui.py
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install playwright pytest-playwright pytest-asyncio
+        python -m playwright install chromium --with-deps
+
+    - name: Run Tests with Xvfb
+      run: |
+        xvfb-run pytest tests/test_gui.py

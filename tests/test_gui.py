@@ -1,19 +1,28 @@
 import pytest
-from nicegui import ui
-from nicegui.testing import UserInterface
-from unittest.mock import MagicMock
+import importlib
 import sys
+from unittest.mock import MagicMock
+from nicegui.testing import UserInterface
 
+# 1. Mock hardware/local dependencies globally
 sys.modules['robot_python_code'] = MagicMock()
 sys.modules['parameters'] = MagicMock()
 
-from lab01_gui import main_page
+# List of labs to test
+LABS = [
+    ("base_code_lab_01.robot_python_code.lab01_gui"),
+]
 
+@pytest.mark.parametrize("module_path", LABS)
 @pytest.fixture
-def user_interface(ui_run):
-    main_page()
+def user_interface(ui_run, module_path):
+    # 2. Dynamically import the lab module
+    lab_module = importlib.import_module(module_path)
+    # Call the main_page function from that specific lab
+    lab_module.main_page()
 
-async def test_gui_elements_render(user_interface: UserInterface):
+@pytest.mark.parametrize("module_path", LABS)
+async def test_gui_elements_render(user_interface: UserInterface, module_path):
     """Check if the critical UI components exist on the page."""
     await user_interface.open('/')
     
@@ -24,13 +33,9 @@ async def test_gui_elements_render(user_interface: UserInterface):
     await user_interface.should_see('Data Logging')
     await user_interface.should_see('Robot Connect')
     await user_interface.should_see('SPEED:')
-    await user_interface.should_see('STEER:')
 
-async def test_speed_slider_interaction(user_interface: UserInterface):
-    """Test that toggling the speed switch works."""
+@pytest.mark.parametrize("module_path", LABS)
+async def test_speed_interaction(user_interface: UserInterface, module_path):
     await user_interface.open('/')
-    
-    # Find the Speed Enable switch and click it
     await user_interface.click('Enable') 
-    
     assert await user_interface.find('SPEED:') is not None

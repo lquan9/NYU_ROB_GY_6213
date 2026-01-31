@@ -5,4 +5,3 @@ nicegui
 serial
 pywebview
 PyGObject
-pylint

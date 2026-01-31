@@ -38,7 +38,7 @@ pip install -r requirements.txt
 - Arduino software upload & testing
 - GUI control
 
-[Lab 01 details](#)
+[Lab 01 details](docs/lab-01.md)
 
 ---
 

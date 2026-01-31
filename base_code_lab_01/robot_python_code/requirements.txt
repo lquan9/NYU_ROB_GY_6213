@@ -1,7 +1,0 @@
-opencv-python
-opencv-contrib-python
-matplotlib
-nicegui
-serial
-pywebview
-PyGObject

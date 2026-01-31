@@ -1,5 +1,10 @@
-# Overview
+# ROB-GY 6213: Robot Navigation and Localization
 This repository is used to release labs for the NYU course ROB-GY 6213: Robot Localization and Navigation.
+
+[![Arduino Build](https://github.com/lquan9/NYU_ROB_GY_6213/actions/workflows/arduino_ci.yml/badge.svg)](https://github.com/lquan9/NYU_ROB_GY_6213/actions)
+[![Pylint Score](https://img.shields.io/badge/pylint-3.89-orange)](https://github.com/lquan9/NYU_ROB_GY_6213/actions/workflows/pylint.yml)
+[![Python Version](https://img.shields.io/badge/python-%203.12-blue)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 | Authors              | Email                |
 |-------------------|----------------------|
@@ -12,9 +17,9 @@ This repository is used to release labs for the NYU course ROB-GY 6213: Robot Lo
 > <br> All have contributed equally to this work.
 > </sup>
 > 
-> [Code](https://github.com/lquan9/NYU_ROB_GY_6213) | [Paper](#)
+> [Code](https://github.com/lquan9/NYU_ROB_GY_6213) | [Docs](./docs)
 
-
+# Quick Start
 ## Pre-requisites
 ### Setup Python workspace
 ```bash

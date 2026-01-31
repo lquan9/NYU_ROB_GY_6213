@@ -1,7 +1,7 @@
-opencv-python
-opencv-contrib-python
+opencv-python-headless
+opencv-contrib-python-headless
 matplotlib
 nicegui
 serial
-pywebview
-PyGObject
+#pywebview
+#PyGObject

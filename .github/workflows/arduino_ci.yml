@@ -9,6 +9,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Install Platform and Arduino Libraries
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install arduino:mbed_giga
+          arduino-cli lib install "Servo"
+
+      - name: Dummy wifi credentials
+        run: |
+          for dir in $(find . -name "*.ino" -exec dirname {} \+ | sort -u); do
+            echo "Gen dummy credentials in $dir"
+            printf 'char ssid[] = "ssid";\nchar pass[] = "passwd";\nchar remoteIP[] = "192.168.0.1";\n' > "$dir/wifi_credentials.h"
+          done
+
       - name: Compile All Sketches for Giga R1
         uses: arduino/compile-sketches@v1
         with:

@@ -5,6 +5,8 @@
 #define SendDeltaTimeInMs 100      // Number ms between messages sent to laptop
 #define ReceiveDeltaTimeInMs 10    // Number ms between checking for control signals sent from laptop
 #include "wifi_credentials.h"
+#include "parameters.h"
+
 unsigned int localPort = 4010;     // local port to listen on - no need to change
 unsigned int remotePort = 4010;    // local port to listen on - no need to change
 int status = WL_IDLE_STATUS;

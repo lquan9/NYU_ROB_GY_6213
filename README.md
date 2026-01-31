@@ -1,4 +1,76 @@
 This repository is used to release labs for the NYU course ROB-GY 6213: Robot Localization and Navigation.
 
-### C2 IP Address:
-* 192.168.0.119
+## Labs (WIP)
+
+### Lab 01 — Robot Bring-Up & Remote Control
+**Goal:** Build the robot and connect it to your computer to enable remote control.
+
+**Key subgoals:**
+- Robot chassis construction
+- WiFi router setup
+- Fork the base code
+- Arduino software upload & testing
+- GUI control
+
+[Lab 01 details](#)
+
+---
+
+### Lab 02 — Motion Model & Calibration
+**Goal:** Characterize robot motion with mathematical equations and probabilistic uncertainty.
+
+**Key subgoals:**
+- Setup: choose floor & tune steering
+- Analysis: map encoder counts to distance
+- Calibration: map steering commands to rotational velocity
+- Implementation: motion model + sampling
+- Documentation: report writing & video recording
+
+[Lab 02 details](#)
+
+---
+
+### Lab 03 — EKF Localization
+**Goal:** Design an Extended Kalman Filter (EKF) and use it for online/offline localization experiments.
+
+**Key subgoals:**
+- EKF design
+- Offline localization experiments
+- Online localization experiments
+
+[Lab 03 details](#)
+
+---
+
+### Lab 04 — Particle Filter Localization
+**Goal:** Design a Particle Filter (PF) and use it for online/offline localization experiments.
+
+**Key subgoals:**
+- PF design
+- Offline localization experiments
+- Online localization experiments
+
+[Lab 04 details](#)
+
+---
+
+### Lab 05 — Autonomous Navigation System
+**Goal:** Build an autonomous navigation system that drives from any A to B without human intervention.
+
+**Key subgoals:**
+- Localization algorithm design or selection
+- RRT motion planning implementation
+- Trajectory tracking implementation
+- Offline navigation experiments
+- Online navigation experiments
+
+**Component breakdown:**
+- Localization: estimate robot pose in the map
+- RRT planning: collision-free path from start to goal
+- Trajectory tracking: follow path with controller (e.g., Pure Pursuit or PID)
+
+[Lab 05 details](#)
+
+---
+
+## References

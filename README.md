@@ -1,5 +1,31 @@
+# Overview
 This repository is used to release labs for the NYU course ROB-GY 6213: Robot Localization and Navigation.
 
+| Authors              | Email                |
+|-------------------|----------------------|
+| **Jotheesh Kummathi**    | jrk8067@nyu.edu       |
+| **Long Quang**    | lq2146@nyu.edu       |
+| **Rahul Reghunath** | rr4660@nyu.edu     |
+
+> <sup>
+> Authors are with New York University - Tandon School of Engineering
+> <br> 6 MetroTech Center, Brooklyn, NY. 
+> <br> All have contributed equally to this work.
+> </sup>
+> 
+> [Code](https://github.com/lquan9/NYU_ROB_GY_6213) | [Paper](#)
+
+
+## Pre-requisites
+### Setup Python workspace
+```bash
+python3 -m venv rob6213
+. rob6213/bin/activate
+```
+### Install dependencies
+```bash
+pip install -r requirements.txt
+```
 ## Labs (WIP)
 
 ### Lab 01 — Robot Bring-Up & Remote Control

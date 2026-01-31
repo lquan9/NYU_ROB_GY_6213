@@ -1,0 +1,21 @@
+name: Arduino Giga R1 Test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Compile All Sketches for Giga R1
+        uses: arduino/compile-sketches@v1
+        with:
+          # FQBN for the Giga R1 (M7 Core)
+          fqbn: "arduino:mbed_giga:giga"
+          platforms: |
+            - name: "arduino:mbed_giga"
+          # Ensures it finds all .ino files recursively
+          sketch-paths: |
+            - .

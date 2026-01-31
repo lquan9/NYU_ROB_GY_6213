@@ -4,9 +4,7 @@ This repository is used to release labs for the NYU course ROB-GY 6213: Robot Lo
 | Authors              | Email                |
 |-------------------|----------------------|
 | **Jotheesh Kummathi**    | jrk8067@nyu.edu       |
-| **Tarun Palanivelan**    | tp2618@nyu.edu       |
 | **Long Quang**    | lq2146@nyu.edu       |
-| **Rahul Reghunath** | rr4660@nyu.edu     |
 
 > <sup>
 > Authors are with New York University - Tandon School of Engineering

@@ -52,7 +52,7 @@ pip install -r requirements.txt
 - Implementation: motion model + sampling
 - Documentation: report writing & video recording
 
-[Lab 02 details](#)
+[Lab 02 details](docs/lab-02.md)
 
 ---
 

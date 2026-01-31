@@ -15,7 +15,9 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt --with-deps
+          pip install -r requirements.txt
+          pip install pytest nicegui playwrite opencv-python-headless
+          playwrite install chromium --with-deps
 
       - name: Run Tests with Xvfb
         run: |

@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg') # Force non-interactive backend
+
 # External libraries
 import asyncio
 import cv2
@@ -39,6 +42,8 @@ def update_video(video_image):
 
 def get_time_in_ms():
     return int(time()*1000)
+
+robot = None
 
 # Create the gui page
 @ui.page('/')
@@ -178,7 +183,7 @@ def main():
     with ui.card().classes('w-full  items-center'):
         ui.label('ROB-GY - 6213: Robot Navigation & Localization').style('font-size: 24px;')
     
-    # Create the video camera, lidar, and encoder sensor visualizations. These may be dummys for lab 01.
+    # Create the encoder sensor visualizations. These may be dummys for lab 01.
     with ui.card().classes('w-full'):
         with ui.grid(columns=3).classes('w-full items-center'):
             with ui.card().classes('w-full items-center h-60'):
@@ -187,8 +192,8 @@ def main():
                 else:
                     ui.image('./a_robot_image.jpg').props('height=2')
                     video_image = None
-            with ui.card().classes('w-full items-center h-60'):
-                main_plot = ui.pyplot(figsize=(3, 3))
+            # with ui.card().classes('w-full items-center h-60'):
+            #     main_plot = ui.pyplot(figsize=(3, 3))
             with ui.card().classes('items-center h-60'):
                 ui.label('Encoder:').style('text-align: center;')
                 encoder_count_label = ui.label('0')
@@ -227,12 +232,22 @@ def main():
         cmd_speed, cmd_steering_angle = update_commands()
         robot.control_loop(cmd_speed, cmd_steering_angle, logging_switch.value)
         encoder_count_label.set_text(robot.robot_sensor_signal.encoder_counts)
-        update_lidar_data()
-        show_lidar_plot()
+        # update_lidar_data()
+        # show_lidar_plot()
         update_video(video_image)
         
     ui.timer(0.1, control_loop)
 
+    pass
+
 # Run the gui
-ui.run(native=True)
+# ui.run(native=True)
+if __name__ in {"__main__", "__mp_main__"}:
+    import multiprocessing
+    try:
+        multiprocessing.set_start_method('spawn', force=True)
+    except RuntimeError:
+        pass
+
+    ui.run(native=True)
 

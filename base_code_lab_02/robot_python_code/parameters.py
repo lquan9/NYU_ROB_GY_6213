@@ -1,6 +1,5 @@
 # External libraries
 import math
-from dataclasses import dataclass
 
 # UDP parameters
 localIP = "10.42.0.1" # Put your laptop computer's IP here
@@ -32,3 +31,7 @@ distance_variance_b = 0.
 steering_to_w = 0.
 steering_variance_a = 0.
 steering_variance_b = 0.
+wheelbase = 0.
+track_width = 0.
+wheel_radius = 0.
+max_steer_deg = 0.

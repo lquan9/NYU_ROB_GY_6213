@@ -1,5 +1,6 @@
 # External libraries
 import math
+from dataclasses import dataclass
 
 # UDP parameters
 localIP = "10.42.0.1" # Put your laptop computer's IP here
@@ -23,3 +24,11 @@ data_name_list = ['time', 'control_signal', 'robot_sensor_signal', 'camera_senso
 
 # Experiment trial parameters
 trial_time = 7500 # milliseconds
+
+# MM parameters
+counts_to_m = 0.
+distance_variance_a = 0.
+distance_variance_b = 0.
+steering_to_w = 0.
+steering_variance_a = 0.
+steering_variance_b = 0.

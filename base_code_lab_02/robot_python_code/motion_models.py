@@ -1,34 +1,37 @@
 # External Libraries
 import math
 import random
+import parameters
 
 # Motion Model constants
-
+COUNTS_TO_METERS = parameters.counts_to_m
+DISTANCE_VARIANCE_A = parameters.distance_variance_a
+DISTANCE_VARIANCE_B = parameters.distance_variance_b
+STEERING_TO_W = parameters.steering_to_w
+STEERING_VARIANCE_A = parameters.steering_variance_a
+STEERING_VARIANCE_B = parameters.steering_variance_b
 
 # A function for obtaining variance in distance travelled as a function of distance travelled
-def variance_distance_travelled_s(distance):
-    # Add student code here
-    var_s = 1
+def variance_distance_travelled_s(distance, a=DISTANCE_VARIANCE_A, b=DISTANCE_VARIANCE_B):
+    var_s = max (0.0, a + b * abs(distance))
 
     return var_s
 
 # Function to calculate distance from encoder counts
-def distance_travelled_s(encoder_counts):
-    # Add student code here
-    s = 0
+def distance_travelled_s(encoder_counts, counts_to_m=COUNTS_TO_METERS):
+    s = encoder_counts * counts_to_m
 
     return s
 
-# A function for obtaining variance in distance travelled as a function of distance travelled
-def variance_rotational_velocity_w(distance):
-    # Add student code here
-    var_w = 1
+# A function for obtaining variance in rotational velocity as a function of steering angle command
+def variance_rotational_velocity_w(steering_angle_command, a=STEERING_VARIANCE_A, b=STEERING_VARIANCE_B):
+    var_w = max(0.0, a + b * abs(steering_angle_command))
 
     return var_w
 
-def rotational_velocity_w(steering_angle_command):
-    # Add student code here
-    w = 0
+# A function for calculating rotational velocity from steering angle command
+def rotational_velocity_w(steering_angle_command, steering_to_w=STEERING_TO_W):
+    w = steering_angle_command * steering_to_w
     
     return w
 

@@ -161,7 +161,7 @@ void forward(int speed)
   digitalWrite(RightMotorDirPin2,HIGH);
   digitalWrite(LeftMotorDirPin1,HIGH);
   digitalWrite(LeftMotorDirPin2,LOW);
-  analogWrite(LeftSpeedPin, speed); 
+  analogWrite(LeftSpeedPin, speed * 1.5); 
   analogWrite(RightSpeedPin, speed);
 }
 

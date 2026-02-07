@@ -24,15 +24,11 @@ filename_start = './data/robot_data'
 data_name_list = ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']
 
 # Experiment trial parameters
-# trial_speed = 40
-# trial_speed = 50
-trial_speed = 75
-# trial_speed = 100
-# trial_time = 5000 # milliseconds
-# trial_time = 10000 # milliseconds
-trial_time = 15000 # milliseconds
-# trial_time = 20000 # milliseconds
+trial_type = "steering" # "steering" or "distance"
 extra_trial_log_time = 2000 # milliseconds
+trial_max_speed = 40
+trial_time = 4000 # milliseconds
+trial_input = -15 # delta for steering, u_x for distance
 
 # MM parameters
 counts_to_m = 0.
@@ -41,7 +37,7 @@ distance_variance_b = 0.
 steering_to_w = 0.
 steering_variance_a = 0.
 steering_variance_b = 0.
-wheelbase = 0.
-track_width = 0.
-wheel_radius = 0.
+wheelbase = 0.1444
+track_width = 0.150
+wheel_radius = 0.034
 max_steer_deg = 0.

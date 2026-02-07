@@ -182,7 +182,17 @@ def main():
         steering_switch.value = True
         speed_switch.value = True
         logging_switch.value = True
-        slider_speed.value = parameters.trial_speed
+        if parameters.trial_type == "steering":
+            slider_speed.value = parameters.trial_max_speed
+            slider_steering.value = parameters.trial_input
+        elif parameters.trial_type == "distance":
+            slider_steering.value = 0
+            if math.abs(parameters.trial_input) < parameters.trial_max_speed:
+                slider_speed.value = parameters.trial_input
+            else:
+                slider_speed.value = parameters.trial_max_speed
+                print("Trial input speed exceeds max speed, setting to max speed.")
+
         print("Start time:", robot.trial_start_time)
 
 

@@ -4,6 +4,8 @@ import math
 # UDP parameters
 localIP = "10.42.0.1" # Put your laptop computer's IP here
 arduinoIP = "10.42.0.114" # Put your arduino's IP here
+# localIP = "192.168.1.3" # Put your laptop computer's IP here
+# arduinoIP = "192.168.1.5" # Put your arduino's IP here
 localPort = 4010
 arduinoPort = 4010
 bufferSize = 1024
@@ -22,7 +24,14 @@ filename_start = './data/robot_data'
 data_name_list = ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']
 
 # Experiment trial parameters
-trial_time = 7500 # milliseconds
+# trial_speed = 40
+# trial_speed = 50
+trial_speed = 75
+# trial_speed = 100
+# trial_time = 5000 # milliseconds
+# trial_time = 10000 # milliseconds
+trial_time = 15000 # milliseconds
+# trial_time = 20000 # milliseconds
 extra_trial_log_time = 2000 # milliseconds
 
 # MM parameters

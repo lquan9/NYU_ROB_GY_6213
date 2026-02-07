@@ -182,6 +182,7 @@ def main():
         steering_switch.value = True
         speed_switch.value = True
         logging_switch.value = True
+        slider_speed.value = parameters.trial_speed
         print("Start time:", robot.trial_start_time)
 
 

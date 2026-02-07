@@ -6,6 +6,8 @@
 #define ReceiveDeltaTimeInMs 10    // Number ms between checking for control signals sent from laptop
 #define NoSignalDeltaTimeInMs 2000 // Number ms between message receives from laptop before stopping robot
 #include "wifi_credentials.h"
+
+const int array_length = 128;
 unsigned int localPort = 4010;     // local port to listen on - no need to change
 unsigned int remotePort = 4010;    // local port to listen on - no need to change
 int status = WL_IDLE_STATUS;
@@ -160,8 +162,8 @@ void forward(int speed)
   digitalWrite(RightMotorDirPin2,HIGH);
   digitalWrite(LeftMotorDirPin1,HIGH);
   digitalWrite(LeftMotorDirPin2,LOW);
-  analogWrite(LeftSpeedPin, speed); 
-  analogWrite(RightSpeedPin, speed);
+  analogWrite(LeftSpeedPin, speed * 1.25 ); 
+  analogWrite(RightSpeedPin, speed * 0.95);
 }
 
 // Receive control signal messages from laptop, but only have delta time has passed, e.g. 10ms

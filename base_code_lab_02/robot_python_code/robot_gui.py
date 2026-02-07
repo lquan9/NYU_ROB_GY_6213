@@ -105,8 +105,14 @@ def main():
                 robot.running_trial = False
                 speed_switch.value = False
                 steering_switch.value = False
-                logging_switch.value = False
+                robot.extra_logging = True
                 print("End Trial :", delta_time)
+
+        if robot.extra_logging:
+            delta_time = get_time_in_ms() - robot.trial_start_time
+            if delta_time > parameters.trial_time + parameters.extra_trial_log_time:
+                logging_switch.value = False
+                robot.extra_logging = False
 
         # Regular slider controls
         if speed_switch.value:

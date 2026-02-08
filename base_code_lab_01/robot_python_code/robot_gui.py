@@ -206,19 +206,6 @@ def main():
         
     ui.timer(0.1, control_loop)
 
-@ui.page('/')
-def main_page():
-    # Move robot logic here if it needs to be accessible to the UI
-    pass
-
 # Run the gui
-# ui.run(native=True)
-if __name__ in {"__main__", "__mp_main__"}:
-    import multiprocessing
-    try:
-        multiprocessing.set_start_method('spawn', force=True)
-    except RuntimeError:
-        pass
-
-    ui.run(native=True)
+ui.run(native=True)
 

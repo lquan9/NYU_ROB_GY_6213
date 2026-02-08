@@ -4,6 +4,7 @@
 Robot will host an access point via Jetson Orin with SSID: btf_wifi
 
 ### Network Topology
+```
                 ┌─────────────────────────┐
                 │                         │
                 │    Jetson Orin          │
@@ -33,3 +34,4 @@ Robot will host an access point via Jetson Orin with SSID: btf_wifi
 │ IP: 192.168.153.2/24  │       │ IP: 192.168.153.x/24 │
 │                       │       │                      │
 └───────────────────────┘       └──────────────────────┘
+```

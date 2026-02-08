@@ -1,8 +1,0 @@
-opencv-python-headless
-opencv-contrib-python-headless
-matplotlib
-nicegui
-serial
-pytest
-#pywebview
-#PyGObject

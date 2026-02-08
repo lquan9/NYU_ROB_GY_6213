@@ -1,0 +1,22 @@
+[MASTER]
+extension-pkg-whitelist=cv2,numpy
+
+[MESSAGES CONTROL]
+disable=
+    C0103,  # Invalid name (common in robotics for x, y, z, etc.)
+    C0114,  # Missing module docstring
+    C0115,  # Missing class docstring
+    C0116,  # Missing function docstring
+    R0913,  # Too many arguments
+    R0914,  # Too many local variables
+    R0915,  # Too many statements
+    W0212,  # Access to protected member (common in robotics)
+    W0621,  # Redefining name from outer scope
+    E1101,  # No member (false positives with numpy, cv2)
+
+[FORMAT]
+max-line-length=150
+
+[DESIGN]
+max-args=10
+max-locals=20

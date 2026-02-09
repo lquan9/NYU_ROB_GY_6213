@@ -1,5 +1,6 @@
 # ROB-GY 6213: Robot Navigation and Localization
-This repository is used to solve labs for the NYU course ROB-GY 6213: Robot Localization and Navigation.
+This repository was originally forked from: https://github.com/cmclarkk/NYU_ROB_GY_6213. </br>
+Primarily used to solve labs for the NYU course ROB-GY 6213: Robot Localization and Navigation.
 
 [![Arduino Build](https://github.com/lquan9/NYU_ROB_GY_6213/actions/workflows/arduino_ci.yml/badge.svg)](https://github.com/lquan9/NYU_ROB_GY_6213/actions)
 [![Pylint Score](https://img.shields.io/badge/pylint-3.89-orange)](https://github.com/lquan9/NYU_ROB_GY_6213/actions/workflows/pylint.yml)

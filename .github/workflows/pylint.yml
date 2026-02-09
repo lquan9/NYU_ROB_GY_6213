@@ -28,6 +28,9 @@ jobs:
         pip install -e .[dev]
         pip install pylint
 
-    - name: Analysing the code with pylint
-      run: |
-        pylint --fail-under=8.0 --extension-pkg-whitelist=cv2 $(git ls-files 'src/**/*.py')
+    - name: Update Badge
+      uses: Silleellie/pylint-github-action@v2
+      with:
+        lint-path: src/**/*.py
+        python-version: "3.12"
+        args: "--extension-pkg-whitelist=cv2"

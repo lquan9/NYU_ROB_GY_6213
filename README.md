@@ -24,13 +24,24 @@ Primarily used to solve labs for the NYU course ROB-GY 6213: Robot Localization 
 ## Pre-requisites
 ### Setup Python workspace
 ```bash
-python3 -m venv rob6213
-. rob6213/bin/activate
+python3 -m venv rob6213_env
+. rob6213_env/bin/activate
 ```
 ### Install dependencies
 ```bash
-pip install -r requirements.txt
+pip install -e .[dev]
 ```
+
+### Run
+```bash
+python3 -m robot_python_code.robot_gui
+```
+
+#### Headless
+```bash
+gui
+```
+
 ## Labs (WIP)
 
 ### Lab 01 — Robot Bring-Up & Remote Control
@@ -43,7 +54,7 @@ pip install -r requirements.txt
 - Arduino software upload & testing
 - GUI control
 
-[Lab 01 details](#)
+[Lab 01 details](docs/lab-01.md)
 
 ---
 

@@ -1,8 +1,9 @@
 # ROB-GY 6213: Robot Navigation and Localization
-This repository is used to solve labs for the NYU course ROB-GY 6213: Robot Localization and Navigation.
+This repository was originally forked from: https://github.com/cmclarkk/NYU_ROB_GY_6213. </br>
+Primarily used to solve labs for the NYU course ROB-GY 6213: Robot Localization and Navigation.
 
 [![Arduino Build](https://github.com/lquan9/NYU_ROB_GY_6213/actions/workflows/arduino_ci.yml/badge.svg)](https://github.com/lquan9/NYU_ROB_GY_6213/actions)
-[![Pylint Score](https://img.shields.io/badge/pylint-3.89-orange)](https://github.com/lquan9/NYU_ROB_GY_6213/actions/workflows/pylint.yml)
+![pylint](https://img.shields.io/badge/PyLint-6.21-orange?logo=python&logoColor=white)
 [![Python Version](https://img.shields.io/badge/python-%203.12-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -23,13 +24,24 @@ This repository is used to solve labs for the NYU course ROB-GY 6213: Robot Loca
 ## Pre-requisites
 ### Setup Python workspace
 ```bash
-python3 -m venv rob6213
-. rob6213/bin/activate
+python3 -m venv rob6213_env
+. rob6213_env/bin/activate
 ```
 ### Install dependencies
 ```bash
-pip install -r requirements.txt
+pip install -e .[dev]
 ```
+
+### Run
+```bash
+python3 -m robot_python_code.robot_gui
+```
+
+#### Headless
+```bash
+gui
+```
+
 ## Labs (WIP)
 
 ### Lab 01 — Robot Bring-Up & Remote Control
@@ -42,7 +54,7 @@ pip install -r requirements.txt
 - Arduino software upload & testing
 - GUI control
 
-[Lab 01 details](#)
+[Lab 01 details](docs/lab-01.md)
 
 ---
 

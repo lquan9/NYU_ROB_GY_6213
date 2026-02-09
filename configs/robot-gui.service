@@ -1,0 +1,23 @@
+[Unit]
+Description=ROB6213 Robot Navigation GUI
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=robot
+Group=robot
+WorkingDirectory=/home/robot/Code/rob_gy_6213
+
+ExecStart=/home/robot/Code/rob_gy_6213/rob6213/bin/gui
+
+Restart=on-failure
+RestartSec=10
+
+Environment="PYTHONUNBUFFERED=1"
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

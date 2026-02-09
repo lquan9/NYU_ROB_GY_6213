@@ -1,9 +1,11 @@
+"""Parameters TODO: change to yaml"""
+
 # External libraries
 import math
 
 # UDP parameters
-localIP = "192.168.0.192" # Put your laptop computer's IP here
-arduinoIP = "192.168.0.184" # Put your arduino's IP here
+localIP = "10.42.0.1" # Put your laptop computer's IP here
+arduinoIP = "10.42.0.114" # Put your arduino's IP here
 localPort = 4010
 arduinoPort = 4010
 bufferSize = 1024

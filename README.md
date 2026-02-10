@@ -3,7 +3,7 @@ This repository was originally forked from: https://github.com/cmclarkk/NYU_ROB_
 Primarily used to solve labs for the NYU course ROB-GY 6213: Robot Localization and Navigation.
 
 [![Arduino Build](https://github.com/lquan9/NYU_ROB_GY_6213/actions/workflows/arduino_ci.yml/badge.svg)](https://github.com/lquan9/NYU_ROB_GY_6213/actions)
-![pylint](https://img.shields.io/badge/PyLint-5.85-orange?logo=python&logoColor=white)
+![pylint](https://img.shields.io/badge/PyLint-7.70-orange?logo=python&logoColor=white)
 [![Python Version](https://img.shields.io/badge/python-%203.12-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 

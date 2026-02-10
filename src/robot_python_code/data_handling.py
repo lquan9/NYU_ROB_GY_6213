@@ -35,19 +35,41 @@ def get_trial_files(trial_data_dir):
         return []
     return sorted(str(path) for path in trial_path.glob('robot_data_*.pkl'))
 
-def plot_trial_basics(filename):
+def plot_trial_basics(fig, filename):
     """For a given trial, plot the encoder counts, velocities, steering angles"""
     time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
 
-    plt.plot(time_list, encoder_count_list)
-    plt.title('Encoder Values')
-    plt.show()
-    plt.plot(time_list, velocity_list)
-    plt.title('Speed')
-    plt.show()
-    plt.plot(time_list, steering_angle_list)
-    plt.title('Steering')
-    plt.show()
+    fig.patch.set_facecolor('black')
+    fig.clf()
+
+    ax1 = fig.add_subplot(3, 1, 1)
+    ax1.plot(time_list, encoder_count_list)
+    ax1.set_title('Encoder Values', color='white')
+    ax1.set_xlabel('Time', color='white')
+    ax1.set_ylabel('Encoder Counts', color='white')
+    ax1.set_facecolor('black')
+    ax1.tick_params(colors='white')
+    ax1.grid(True, color='gray', alpha=0.3)
+
+    ax2 = fig.add_subplot(3, 1, 2)
+    ax2.plot(time_list, velocity_list)
+    ax2.set_title('Speed', color='white')
+    ax2.set_xlabel('Time', color='white')
+    ax2.set_ylabel('Speed', color='white')
+    ax2.set_facecolor('black')
+    ax2.tick_params(colors='white')
+    ax2.grid(True, color='gray', alpha=0.3)
+
+    ax3 = fig.add_subplot(3, 1, 3)
+    ax3.plot(time_list, steering_angle_list)
+    ax3.set_title('Steering', color='white')
+    ax3.set_xlabel('Time', color='white')
+    ax3.set_ylabel('Steering', color='white')
+    ax3.set_facecolor('black')
+    ax3.tick_params(colors='white')
+    ax3.grid(True, color='gray', alpha=0.3)
+
+    fig.tight_layout()
 
 
 def run_my_model_on_trial(filename, show_plot = True, plot_color = 'ko'):
@@ -142,6 +164,26 @@ def sample_model(num_samples):
     plt.ylabel('Y (m)')
     plt.show()
 
+def get_trial_metrics(trial_files):
+    """Compute aggregate metrics for trial files used in dashboard plots."""
+    trial_metrics = []
+    for filename in trial_files:
+        trial_time, trial_encoder, trial_velocity, trial_steering = get_file_data(filename)
+        if len(trial_time) < 2:
+            continue
+        duration = trial_time[-1] - trial_time[0]
+        net_encoder = trial_encoder[-1] - trial_encoder[0]
+        avg_speed = float(np.mean(trial_velocity))
+        avg_abs_steer = float(np.mean(np.abs(trial_steering)))
+        trial_metrics.append({
+            'filename': Path(filename).name,
+            'duration': duration,
+            'net_encoder': net_encoder,
+            'avg_speed': avg_speed,
+            'avg_abs_steer': avg_abs_steer,
+        })
+
+    return trial_metrics
 
 ######### MAIN ########
 

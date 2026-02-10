@@ -203,6 +203,19 @@ def main_page():
 
         print("Start time:", robot.trial_start_time)
 
+    def build_trial_plots(selected_file):
+        """ Build the trial plot for the selected file"""
+        if not selected_file:
+            ui.dialog('No trial file selected.').open()
+            return
+
+        # overall data metrics 
+        trial_metrics = data_handling.get_trial_metrics(trial_files)
+
+        with selected_trial_plot:
+            data_handling.plot_trial_basics(selected_trial_plot.fig, selected_file)
+
+
     def stop_trial():
         robot_instance.running_trial = False
         robot_instance.extra_logging = False
@@ -284,8 +297,15 @@ def main_page():
                         value=trial_files[0],
                         label='Select a trial file',
                     ).classes('w-full')
+                    ui.button("Generate", on_click=lambda: build_trial_plots(trial_selector.value))
                 else:
                     ui.label('No trial files found.').style('color: #ff7f7f')
+
+            selected_trial_plot = ui.pyplot(figsize=(8, 5)).classes('w-full')
+
+            if trial_files:
+                trial_selector.on_value_change(lambda event: build_trial_plots(event.value))
+                build_trial_plots(trial_files[0])
 
         with ui.tab_panel(sim_tab):
             with ui.card().classes('w-full'):

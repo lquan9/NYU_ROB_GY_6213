@@ -203,6 +203,16 @@ def main_page():
 
         print("Start time:", robot.trial_start_time)
 
+    def stop_trial():
+        robot_instance.running_trial = False
+        robot_instance.extra_logging = False
+        speed_switch.value = False
+        steering_switch.value = False
+        logging_switch.value = False
+        slider_speed.value = 0
+        slider_steering.value = 0
+        print("Trial stopped")
+
     trial_data_dir = parameters.datapath
     print(f"Looking for trial data in: {trial_data_dir}")
     if not trial_data_dir.exists():
@@ -237,7 +247,9 @@ def main_page():
                         encoder_count_label = ui.label('0')
                         logging_switch = ui.switch('Data Logging ')
                         udp_switch = ui.switch('Robot Connect')
-                        run_trial_button = ui.button('Run Trial', on_click=lambda:run_trial())
+                        with ui.row():
+                            run_trial_button = ui.button('Run Trial', on_click=lambda:run_trial())
+                            stop_trial_button = ui.button('Stop Trial', on_click=lambda:stop_trial()).props('color=negative')
 
             # Create the robot manual control slider and switch for speed
             with ui.card().classes('w-full'):

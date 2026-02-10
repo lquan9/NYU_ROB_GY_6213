@@ -5,7 +5,8 @@ import math
 import random
 from dataclasses import dataclass
 
-import parameters
+# Local libraries
+from . import parameters
 
 # Motion Model constants
 COUNTS_TO_METERS = parameters.counts_to_m

@@ -1,15 +1,12 @@
 """Python code for the robot"""
 
 # External libraries
-import serial
+from time import strftime
 import socket
 import pickle
 import time
 import cv2
 import cv2.aruco as aruco
-import numpy as np
-import matplotlib.pyplot as plt
-from time import strftime
 
 # Local libraries
 from . import parameters
@@ -310,7 +307,6 @@ class Robot:
         # Send msg
         if self.msg_receiver is not None:
             self.msg_sender.send_control_signal(control_signal)
-            
+
         # Log the data
         self.data_logger.log(logging_switch_on, time.perf_counter(), control_signal, self.robot_sensor_signal, self.camera_sensor_signal)
-

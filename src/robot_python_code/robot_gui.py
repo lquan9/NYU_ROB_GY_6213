@@ -49,11 +49,13 @@ def update_video(video_image):
         video_image.force_reload()
 
 def get_time_in_ms():
+    """Get the current time in milliseconds."""
     return int(time()*1000)
 
 # Create the gui page
 @ui.page('/')
 def main_page():
+    """Main page of the GUI."""
 
     # Robot variables
     robot = robot_python_code.Robot()
@@ -73,11 +75,11 @@ def main_page():
     # Set dark mode for gui
     dark = ui.dark_mode()
     dark.value = True
-    
+
     # Set up the video stream, not needed for lab 1
-    if stream_video:
+    if STREAM_VIDEO:
         video_capture = cv2.VideoCapture(1)
-    
+
     # Enable frame grabs from the video stream.
     @app.get('/video/frame')
     async def grab_video_frame() -> Response:
@@ -100,7 +102,7 @@ def main_page():
             if distance_in_mm > 20 and abs(angle) < 360:
                 index = max(0,min(int(360/lidar_angle_res-1),int((angle-(lidar_angle_res/2))/lidar_angle_res)))
                 lidar_distance_list[index] = distance_in_mm/1000
-               
+ 
     # Determine what speed and steering commands to send
     def update_commands():
 
@@ -131,8 +133,8 @@ def main_page():
             cmd_steering_angle = 0
         return cmd_speed, cmd_steering_angle
 
-    # Update
     def update_connection_to_robot():
+        """Update"""
         if udp_switch.value:
             if not robot.connected_to_hardware:
                 udp, udp_success = robot_python_code.create_udp_communication(parameters.arduinoIP, parameters.localIP, parameters.arduinoPort, parameters.localPort, parameters.bufferSize)
@@ -148,20 +150,20 @@ def main_page():
                 robot.eliminate_udp_connection()
                 robot.connected_to_hardware = False
 
-    # Update the speed slider if steering is not enabled
     def enable_speed():
+        """Update the speed slider if steering is not enabled."""
         #if not speed_switch.value:
         #    slider_speed.value = 0
         d = 0
 
-    # Update the steering slider if steering is not enabled
     def enable_steering():
+        """Update the steering slider if steering is not enabled."""
         #if not steering_switch.value:
         #    slider_steering.value = 0
         d = 0
 
-    # Visualize the lidar scans
     def show_lidar_plot():
+        """ Visualize the lidar scans"""
         with main_plot:
             fig = main_plot.fig
             fig.patch.set_facecolor('black')
@@ -169,7 +171,7 @@ def main_page():
             plt.style.use('dark_background')
             plt.tick_params(axis='x', colors='lightgray')
             plt.tick_params(axis='y', colors='lightgray')
-                
+
             for i in range(num_angles):
                 distance = lidar_distance_list[i]
                 cos_ang = lidar_cos_angle_list[i]
@@ -223,7 +225,7 @@ def main_page():
                 logging_switch = ui.switch('Data Logging ')
                 udp_switch = ui.switch('Robot Connect')
                 run_trial_button = ui.button('Run Trial', on_click=lambda:run_trial())
-                
+
     # Create the robot manual control slider and switch for speed
     with ui.card().classes('w-full'):
         with ui.grid(columns=4).classes('w-full'):

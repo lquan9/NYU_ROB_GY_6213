@@ -1,16 +1,15 @@
+"""Data handling"""
 # External Libraries
-import matplotlib.pyplot as plt
-from pathlib import Path
 import math
+from pathlib import Path
 import numpy as np
+import matplotlib.pyplot as plt
 
-# Internal Libraries
-import parameters
-import robot_python_code
-import motion_models
+# Local libraries
+from . import robot_python_code, motion_models
 
-# Open a file and return data in a form ready to plot
 def get_file_data(filename):
+    """ Open a file and return data in a form ready to plot"""
     data_loader = robot_python_code.DataLoader(filename)
     data_dict = data_loader.load()
 
@@ -26,14 +25,14 @@ def get_file_data(filename):
     for row in control_signal_list:
         velocity_list.append(row[0])
         steering_angle_list.append(row[1])
-    
+
     return time_list, encoder_count_list, velocity_list, steering_angle_list
 
 
-# For a given trial, plot the encoder counts, velocities, steering angles
 def plot_trial_basics(filename):
+    """For a given trial, plot the encoder counts, velocities, steering angles"""
     time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
-    
+ 
     plt.plot(time_list, encoder_count_list)
     plt.title('Encoder Values')
     plt.show()
@@ -45,11 +44,11 @@ def plot_trial_basics(filename):
     plt.show()
 
 
-# Plot a trajectory using the motion model, input data ste from a single trial.
 def run_my_model_on_trial(filename, show_plot = True, plot_color = 'ko'):
+    """Plot a trajectory using the motion model, input data ste from a single trial."""
     time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
-    
-    motion_model = motion_models.MyMotionModel([0,0,0], 0)
+
+    motion_model = motion_models.AckermannMM([0,0,0], 0)
     x_list, y_list, theta_list = motion_model.traj_propagation(time_list, encoder_count_list, steering_angle_list)
 
     plt.plot(x_list, y_list,plot_color)
@@ -59,8 +58,8 @@ def run_my_model_on_trial(filename, show_plot = True, plot_color = 'ko'):
         plt.show()
 
 
-# Iterate through many trials and plot them as trajectories with motion model
 def plot_many_trial_predictions(directory):
+    """Iterate through many trials and plot them as trajectories with motion model"""
     directory_path = Path(directory)
     plot_color_list = ['r.','k.','g.','c.', 'b.', 'r.','k.','g.','c.', 'b.','r.','k.','g.','c.', 'b.', 'r.','k.','g.','c.', 'b.']
     count = 0
@@ -71,17 +70,17 @@ def plot_many_trial_predictions(directory):
         count += 1
     plt.show()
 
-# Calculate the predicted distance from single trial for a motion model
 def run_my_model_to_predict_distance(filename):
+    """ Calculate the predicted distance from single trial for a motion model."""
     time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
-    motion_model = motion_models.MyMotionModel([0,0,0], 0)
+    motion_model = motion_models.AckermannMM([0,0,0], 0)
     x_list, _, _ = motion_model.traj_propagation(time_list, encoder_count_list, steering_angle_list)
     distance = x_list[-30]
-    
+
     return distance
 
-# Calculate the differences between two lists, and square them.
 def get_diff_squared(m_list,p_list):
+    """Calculate the differences between two lists and square them"""
     diff_squared_list = []
     for i in range(len(m_list)):
         diff_squared = math.pow(m_list[i]-p_list[i],2)
@@ -100,8 +99,8 @@ def get_diff_squared(m_list,p_list):
     return diff_squared_list
 
 
-# Open files, plot them to predict with the motion model, and compare with real values
 def process_files_and_plot(files_and_data, directory):
+    """Open files, plot them to predict with the motion model and compare with real values"""
     predicted_distance_list = []
     measured_distance_list = []
     for row in files_and_data:
@@ -124,11 +123,11 @@ def process_files_and_plot(files_and_data, directory):
     get_diff_squared(measured_distance_list, predicted_distance_list)
 
 
-# Sample and plot some simulated trials
 def sample_model(num_samples):
+    """Sample and plot some simulated trials"""
     traj_duration = 10
     for i in range(num_samples):
-        model = motion_models.MyMotionModel([0,0,0], 0)
+        model = motion_models.AckermannMM([0,0,0], 0)
         traj_x, traj_y, traj_theta = model.generate_simulated_traj(traj_duration)
         plt.plot(traj_x, traj_y, 'k.')
 

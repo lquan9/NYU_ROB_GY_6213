@@ -72,24 +72,38 @@ def plot_trial_basics(fig, filename):
     fig.tight_layout()
 
 
-def run_my_model_on_trial(filename, show_plot = True, plot_color = 'ko'):
-    """Plot a trajectory using the motion model, input data ste from a single trial."""
+def run_my_model_on_trial(fig, filename, plot_color='ko'):
+    """Plot a trajectory using the motion model, input data from a single trial."""
     time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
 
     motion_model = motion_models.AckermannMM([0,0,0], 0)
-    x_list, y_list, theta_list = motion_model.traj_propagation(time_list, encoder_count_list, steering_angle_list)
+    x_list, y_list, theta_list = motion_model.traj_propagation(time_list,
+                                                               encoder_count_list,
+                                                               steering_angle_list)
 
-    plt.plot(x_list, y_list,plot_color)
-    plt.title('Motion Model Predicted XY Traj (m)')
-    plt.axis([-0.5, 1.5, -1, 1])
-    if show_plot:
-        plt.show()
+    fig.patch.set_facecolor('black')
+    fig.clf()
+
+    ax = fig.add_subplot(1, 1, 1)
+    ax.plot(x_list, y_list, plot_color)
+    ax.set_title('Motion Model Predicted XY Traj (m)', color='white')
+    ax.set_xlabel('X (m)', color='white')
+    ax.set_ylabel('Y (m)', color='white')
+    ax.set_facecolor('black')
+    ax.tick_params(colors='white')
+    ax.grid(True, color='gray', alpha=0.3)
+    ax.axis([-0.5, 1.5, -1, 1])
+
+    fig.tight_layout()
 
 
 def plot_many_trial_predictions(directory):
     """Iterate through many trials and plot them as trajectories with motion model"""
     directory_path = Path(directory)
-    plot_color_list = ['r.','k.','g.','c.', 'b.', 'r.','k.','g.','c.', 'b.','r.','k.','g.','c.', 'b.', 'r.','k.','g.','c.', 'b.']
+    plot_color_list = ['r.','k.','g.','c.', 'b.',
+                       'r.','k.','g.','c.', 'b.',
+                       'r.','k.','g.','c.', 'b.',
+                       'r.','k.','g.','c.', 'b.']
     count = 0
     for item in directory_path.iterdir():
         filename = item.name
@@ -151,18 +165,26 @@ def process_files_and_plot(files_and_data, directory):
     get_diff_squared(measured_distance_list, predicted_distance_list)
 
 
-def sample_model(num_samples):
+def sample_model(fig, num_samples=200):
     """Sample and plot some simulated trials"""
+    fig.patch.set_facecolor('black')
+    fig.clf()
+
+    ax = fig.add_subplot(1, 1, 1)
     traj_duration = 10
     for i in range(num_samples):
         model = motion_models.AckermannMM([0,0,0], 0)
         traj_x, traj_y, traj_theta = model.generate_simulated_traj(traj_duration)
-        plt.plot(traj_x, traj_y, 'k.')
+        ax.plot(traj_x, traj_y, 'k.', markersize=1)
 
-    plt.title('Sampling the model')
-    plt.xlabel('X (m)')
-    plt.ylabel('Y (m)')
-    plt.show()
+    ax.set_title('Sampling the model', color='white')
+    ax.set_xlabel('X (m)', color='white')
+    ax.set_ylabel('Y (m)', color='white')
+    ax.set_facecolor('black')
+    ax.tick_params(colors='white')
+    ax.grid(True, color='gray', alpha=0.3)
+
+    fig.tight_layout()
 
 def get_trial_metrics(trial_files):
     """Compute aggregate metrics for trial files used in dashboard plots."""

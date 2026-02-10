@@ -218,6 +218,15 @@ def main_page():
         with aggregate_plot:
             data_handling.plot_trial_aggregates(aggregate_plot.fig, trial_metrics)
 
+    def build_sim_plots(selected_file):
+        """ Build sim plots"""
+        if not selected_file:
+            ui.dialog('No trial file selected.').open()
+            return
+
+        with model_plot:
+            data_handling.run_my_model_on_trial(model_plot.fig, selected_file)
+
 
     def stop_trial():
         robot_instance.running_trial = False
@@ -228,6 +237,20 @@ def main_page():
         slider_speed.value = 0
         slider_steering.value = 0
         print("Trial stopped")
+
+    def create_trial_selector(trial_files, callback, button_label="Generate", title="Select Trial"):
+        """Trial selector"""
+        if trial_files:
+            selector = ui.select(
+                options={file: Path(file).name for file in trial_files},
+                value=trial_files[0],
+                label='Select a trial file',
+            ).classes('w-full')
+            ui.button(button_label, on_click=lambda: callback(selector.value))
+            return selector
+        else:
+            ui.label('No trial files found.').style('color: #ff7f7f')
+            return None
 
     trial_data_dir = parameters.datapath
     print(f"Looking for trial data in: {trial_data_dir}")
@@ -243,7 +266,7 @@ def main_page():
     with ui.tabs().classes('w-full') as tabs:
         control_tab = ui.tab('Robot Control')
         plot_tab = ui.tab('Data Plots')
-        sim_tab = ui.tab('Sim')
+        sim_tab = ui.tab('Simulation')
 
     with ui.tab_panels(tabs, value=control_tab).classes('w-full'):
         with ui.tab_panel(control_tab):
@@ -294,20 +317,12 @@ def main_page():
         with ui.tab_panel(plot_tab):
             with ui.card().classes('w-full'):
                 ui.label('Logged Trials').style('font-size: 20px;')
-                if trial_files:
-                    trial_selector = ui.select(
-                        options={file: Path(file).name for file in trial_files},
-                        value=trial_files[0],
-                        label='Select a trial file',
-                    ).classes('w-full')
-                    ui.button("Generate", on_click=lambda: build_trial_plots(trial_selector.value))
-                else:
-                    ui.label('No trial files found.').style('color: #ff7f7f')
+                trial_selector = create_trial_selector(trial_files, build_trial_plots, "Generate")
 
             selected_trial_plot = ui.pyplot(figsize=(8, 5)).classes('w-full')
             aggregate_plot = ui.pyplot(figsize=(8, 5)).classes('w-full')
 
-            if trial_files:
+            if trial_files and trial_selector:
                 trial_selector.on_value_change(lambda event: build_trial_plots(event.value))
                 build_trial_plots(trial_files[0])
 
@@ -316,13 +331,23 @@ def main_page():
                 ui.label('Run Model Against Trials').style('font-size: 20px;')
                 ui.label(f'Data directory: {trial_data_dir}')
 
-            sim = ui.label('Ready')
+            with ui.card().classes('w-full'):
+                sim_selector = create_trial_selector(trial_files,
+                                                     build_sim_plots,
+                                                     "Run Model")
 
-            with ui.grid(columns=2).classes('w-full gap-2'):
-                ui.button(
-                    'Sample Data',
-                    on_click=lambda: sim.set_text('Run model'),
-                ).props('color=primary')
+            model_plot = ui.pyplot(figsize=(8, 5)).classes('w-full')
+
+            with model_plot:
+                model_plot.fig.patch.set_facecolor('black')
+                ax = model_plot.fig.add_subplot(1, 1, 1)
+                ax.set_facecolor('black')
+                ax.set_xlim(0, 1)
+                ax.set_ylim(0, 1)
+                ax.axis('off')
+
+            with ui.card().classes('w-full'):
+                ui.label('Sample Model').style('font-size: 20px;')
 
     # Update slider values, plots, etc. and run robot control loop
     async def control_loop():

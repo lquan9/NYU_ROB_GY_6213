@@ -48,21 +48,79 @@ def update_video(video_image):
     if STREAM_VIDEO:
         video_image.force_reload()
 
+def get_time_in_ms():
+    return int(time()*1000)
+
+# Create the gui page
 @ui.page('/')
 def main_page():
-    """ Main page of the GIU """
-    # Move robot logic here if it needs to be accessible to the UI
 
     # Robot variables
     robot = robot_python_code.Robot()
-    print("Creating robot instance")
+
+    # Lidar data
+    max_lidar_range = 12
+    lidar_angle_res = 2
+    num_angles = int(360 / lidar_angle_res)
+    lidar_distance_list = []
+    lidar_cos_angle_list = []
+    lidar_sin_angle_list = []
+    for i in range(num_angles):
+        lidar_distance_list.append(max_lidar_range)
+        lidar_cos_angle_list.append(math.cos(i*lidar_angle_res/180*math.pi))
+        lidar_sin_angle_list.append(math.sin(i*lidar_angle_res/180*math.pi))
 
     # Set dark mode for gui
     dark = ui.dark_mode()
     dark.value = True
+    
+    # Set up the video stream, not needed for lab 1
+    if stream_video:
+        video_capture = cv2.VideoCapture(1)
+    
+    # Enable frame grabs from the video stream.
+    @app.get('/video/frame')
+    async def grab_video_frame() -> Response:
+        if not video_capture.isOpened():
+            return placeholder
+        # The `video_capture.read` call is a blocking function.
+        # So we run it in a separate thread (default executor) to avoid blocking the event loop.
+        _, frame = await run.io_bound(video_capture.read)
+        if frame is None:
+            return placeholder
+        # `convert` is a CPU-intensive function, so we run it in a separate process to avoid blocking the event loop and GIL.
+        jpeg = await run.cpu_bound(convert, frame)
+        return Response(content=jpeg, media_type='image/jpeg')
 
+    # Convert lidar data to something visible in correct units. This is dummy data for lab 1.
+    def update_lidar_data():
+        for i in range(robot.robot_sensor_signal.num_lidar_rays):
+            distance_in_mm = robot.robot_sensor_signal.distances[i]
+            angle = 360-robot.robot_sensor_signal.angles[i]
+            if distance_in_mm > 20 and abs(angle) < 360:
+                index = max(0,min(int(360/lidar_angle_res-1),int((angle-(lidar_angle_res/2))/lidar_angle_res)))
+                lidar_distance_list[index] = distance_in_mm/1000
+               
     # Determine what speed and steering commands to send
     def update_commands():
+
+        # Experiment trial controls
+        if robot.running_trial:
+            delta_time = get_time_in_ms() - robot.trial_start_time
+            if delta_time > parameters.trial_time:
+                robot.running_trial = False
+                speed_switch.value = False
+                steering_switch.value = False
+                robot.extra_logging = True
+                print("End Trial :", delta_time)
+
+        if robot.extra_logging:
+            delta_time = get_time_in_ms() - robot.trial_start_time
+            if delta_time > parameters.trial_time + parameters.extra_trial_log_time:
+                logging_switch.value = False
+                robot.extra_logging = False
+
+        # Regular slider controls
         if speed_switch.value:
             cmd_speed = slider_speed.value
         else:
@@ -77,11 +135,7 @@ def main_page():
     def update_connection_to_robot():
         if udp_switch.value:
             if not robot.connected_to_hardware:
-                udp, udp_success = robot_python_code.create_udp_communication(parameters.arduinoIP, 
-                                                                              parameters.localIP, 
-                                                                              parameters.arduinoPort, 
-                                                                              parameters.localPort, 
-                                                                              parameters.bufferSize)
+                udp, udp_success = robot_python_code.create_udp_communication(parameters.arduinoIP, parameters.localIP, parameters.arduinoPort, parameters.localPort, parameters.bufferSize)
                 if udp_success:
                     robot.setup_udp_connection(udp)
                     robot.connected_to_hardware = True
@@ -96,13 +150,57 @@ def main_page():
 
     # Update the speed slider if steering is not enabled
     def enable_speed():
-        if not speed_switch.value:
-            slider_speed.value = 0
+        #if not speed_switch.value:
+        #    slider_speed.value = 0
+        d = 0
 
     # Update the steering slider if steering is not enabled
     def enable_steering():
-        if not steering_switch.value:
+        #if not steering_switch.value:
+        #    slider_steering.value = 0
+        d = 0
+
+    # Visualize the lidar scans
+    def show_lidar_plot():
+        with main_plot:
+            fig = main_plot.fig
+            fig.patch.set_facecolor('black')
+            plt.clf()
+            plt.style.use('dark_background')
+            plt.tick_params(axis='x', colors='lightgray')
+            plt.tick_params(axis='y', colors='lightgray')
+                
+            for i in range(num_angles):
+                distance = lidar_distance_list[i]
+                cos_ang = lidar_cos_angle_list[i]
+                sin_ang = lidar_sin_angle_list[i]
+                x = [distance * cos_ang, max_lidar_range * cos_ang]
+                y = [distance * sin_ang, max_lidar_range * sin_ang]
+                plt.plot(x, y, 'r')
+            plt.grid(True)
+            #plt.axis('equal')
+            plt.xlim(-2,2)
+            plt.ylim(-2,2)
+
+    def run_trial():
+        robot.trial_start_time = get_time_in_ms()
+        robot.running_trial = True
+        steering_switch.value = True
+        speed_switch.value = True
+        logging_switch.value = True
+        if parameters.trial_type == "steering":
+            slider_speed.value = parameters.trial_max_speed
+            slider_steering.value = parameters.trial_input
+        elif parameters.trial_type == "distance":
             slider_steering.value = 0
+            if math.abs(parameters.trial_input) < parameters.trial_max_speed:
+                slider_speed.value = parameters.trial_input
+            else:
+                slider_speed.value = parameters.trial_max_speed
+                print("Trial input speed exceeds max speed, setting to max speed.")
+
+        print("Start time:", robot.trial_start_time)
+
 
     # Create the gui title bar
     with ui.card().classes('w-full  items-center'):
@@ -124,7 +222,8 @@ def main_page():
                 encoder_count_label = ui.label('0')
                 logging_switch = ui.switch('Data Logging ')
                 udp_switch = ui.switch('Robot Connect')
-
+                run_trial_button = ui.button('Run Trial', on_click=lambda:run_trial())
+                
     # Create the robot manual control slider and switch for speed
     with ui.card().classes('w-full'):
         with ui.grid(columns=4).classes('w-full'):

@@ -1,6 +1,7 @@
 """Python code for the robot"""
 
 # External libraries
+import serial
 import socket
 import pickle
 import time
@@ -8,6 +9,7 @@ import cv2
 import cv2.aruco as aruco
 import numpy as np
 import matplotlib.pyplot as plt
+from time import strftime
 
 # Local libraries
 from . import parameters
@@ -53,18 +55,34 @@ class DataLogger:
     """Class to hold the data logger that records data when needed"""
 
     # Constructor
-    def __init__(self, filename, data_name_list):
-        self.filename = filename
+    def __init__(self, filename_start, data_name_list):
+        self.filename_start = filename_start
+        self.filename = filename_start
         self.line_count = 0
         self.file = open(filename, 'w', encoding='utf-8')
         self.dictionary = {}
         self.data_name_list = data_name_list
         for name in data_name_list:
             self.dictionary[name] = []
+        self.currently_logging = False
 
+    # Open the log file
+    def reset_logfile(self, control_signal):
+        self.filename = self.filename_start + "_"+str(control_signal[0])+"_"+str(control_signal[1]) + strftime("_%d_%m_%y_%H_%M_%S.pkl")
+        self.dictionary = {}
+        for name in self.data_name_list:
+            self.dictionary[name] = []
+
+        
     # Log one time step of data
-    def log(self, time, control_signal, robot_sensor_signal, camera_sensor_signal):
-        """Log one time step of data"""
+    def log(self, logging_switch_on, time, control_signal, robot_sensor_signal, camera_sensor_signal):
+        if not logging_switch_on:
+            if self.currently_logging:
+                self.currently_logging = False
+        else:
+            if not self.currently_logging:
+                self.currently_logging = True
+                self.reset_logfile(control_signal)
 
         self.dictionary['time'].append(time)
         self.dictionary['control_signal'].append(control_signal)
@@ -256,10 +274,13 @@ class Robot:
 
     def __init__(self):
         self.connected_to_hardware = False
+        self.running_trial = False
+        self.extra_logging = False
+        self.trial_start_time = 0
         self.msg_sender = None
         self.msg_receiver = None
         self.camera_sensor = CameraSensor(parameters.camera_id)
-        self.data_logger = DataLogger(parameters.filename, parameters.data_name_list)
+        self.data_logger = DataLogger(parameters.filename_start, parameters.data_name_list)
         self.robot_sensor_signal = RobotSensorSignal([0, 0, 0])
         self.camera_sensor_signal = [0,0,0,0,0,0]
         print("New robot!")
@@ -277,7 +298,7 @@ class Robot:
         print("Eliminate UDP !!!")
 
     # One iteration of the control loop to be called repeatedly
-    def control_loop(self, cmd_speed = 0, cmd_steering_angle = 0, logging = False):
+    def control_loop(self, cmd_speed = 0, cmd_steering_angle = 0, logging_switch_on = False):
         """ One iteration of the robot control loop to be called repeatedly"""
         # Receive msg
         if self.msg_sender is not None:
@@ -289,7 +310,7 @@ class Robot:
         # Send msg
         if self.msg_receiver is not None:
             self.msg_sender.send_control_signal(control_signal)
-
+            
         # Log the data
-        if logging:
-            self.data_logger.log(time.perf_counter(), control_signal, self.robot_sensor_signal, self.camera_sensor_signal)
+        self.data_logger.log(logging_switch_on, time.perf_counter(), control_signal, self.robot_sensor_signal, self.camera_sensor_signal)
+

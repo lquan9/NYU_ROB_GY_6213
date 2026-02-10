@@ -215,6 +215,9 @@ def main_page():
         with selected_trial_plot:
             data_handling.plot_trial_basics(selected_trial_plot.fig, selected_file)
 
+        with aggregate_plot:
+            data_handling.plot_trial_aggregates(aggregate_plot.fig, trial_metrics)
+
 
     def stop_trial():
         robot_instance.running_trial = False
@@ -302,6 +305,7 @@ def main_page():
                     ui.label('No trial files found.').style('color: #ff7f7f')
 
             selected_trial_plot = ui.pyplot(figsize=(8, 5)).classes('w-full')
+            aggregate_plot = ui.pyplot(figsize=(8, 5)).classes('w-full')
 
             if trial_files:
                 trial_selector.on_value_change(lambda event: build_trial_plots(event.value))

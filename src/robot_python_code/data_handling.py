@@ -185,6 +185,48 @@ def get_trial_metrics(trial_files):
 
     return trial_metrics
 
+def plot_trial_aggregates(fig, trial_metrics):
+    """Render aggregate scatter and duration plots."""
+    fig.patch.set_facecolor('black')
+    fig.clf()
+
+    if not trial_metrics:
+        ax = fig.add_subplot(1, 1, 1)
+        ax.text(0.5, 0.5, 'No valid trial metrics found', ha='center', va='center', color='white')
+        ax.set_facecolor('black')
+        ax.set_axis_off()
+        return
+
+    durations = [row['duration'] for row in trial_metrics]
+    encoder_net = [row['net_encoder'] for row in trial_metrics]
+    avg_speeds = [row['avg_speed'] for row in trial_metrics]
+    avg_abs_steers = [row['avg_abs_steer'] for row in trial_metrics]
+
+    ax1 = fig.add_subplot(1, 2, 1)
+    scatter = ax1.scatter(avg_speeds, encoder_net, c=avg_abs_steers, cmap='viridis')
+    ax1.set_title('Net Encoder vs Avg Speed', color='white')
+    ax1.set_xlabel('Avg Speed Command', color='white')
+    ax1.set_ylabel('Net Encoder Counts', color='white')
+    ax1.set_facecolor('black')
+    ax1.tick_params(colors='white')
+    ax1.grid(True, color='gray', alpha=0.3)
+    cbar = fig.colorbar(scatter, ax=ax1, label='Avg |Steering|')
+    cbar.ax.yaxis.set_tick_params(color='white')
+    cbar.ax.yaxis.label.set_color('white')
+    cbar.outline.set_edgecolor('white')
+    plt.setp(plt.getp(cbar.ax.axes, 'yticklabels'), color='white')
+
+    ax2 = fig.add_subplot(1, 2, 2)
+    ax2.plot(range(len(trial_metrics)), durations, 'o-', color='orange')
+    ax2.set_title('Trial Duration', color='white')
+    ax2.set_xlabel('Trial Index', color='white')
+    ax2.set_ylabel('Duration (s)', color='white')
+    ax2.set_facecolor('black')
+    ax2.tick_params(colors='white')
+    ax2.grid(True, color='gray', alpha=0.3)
+
+    fig.tight_layout()
+
 ######### MAIN ########
 
 # Some sample data to test with

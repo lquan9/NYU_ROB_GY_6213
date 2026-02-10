@@ -1,5 +1,6 @@
 """Parameters TODO: change to yaml"""
 
+from pathlib import Path
 # External libraries
 import math
 
@@ -20,7 +21,7 @@ num_robot_control_signals = 2 # speed, steering
 
 # Logging parameters
 max_num_lines_before_write = 50
-filename_start = '../../data/robot_data'
+datapath = Path(__file__).resolve().parent / 'data'
 data_name_list = ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']
 
 # Experiment trial parameters

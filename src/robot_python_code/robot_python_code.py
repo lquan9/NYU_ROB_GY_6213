@@ -52,27 +52,28 @@ class DataLogger:
     """Class to hold the data logger that records data when needed"""
 
     # Constructor
-    def __init__(self, filename_start, data_name_list):
-        self.filename_start = filename_start
-        self.filename = filename_start
+    def __init__(self, datapath, data_name_list):
+        self.datapath = datapath
+        datapath.mkdir(parents=True, exist_ok=True)
+        self.filename = datapath / "robot_data"
         self.line_count = 0
-        self.file = open(filename, 'w', encoding='utf-8')
+        #self.file = open(filename, 'w', encoding='utf-8')
         self.dictionary = {}
         self.data_name_list = data_name_list
         for name in data_name_list:
             self.dictionary[name] = []
         self.currently_logging = False
 
-    # Open the log file
     def reset_logfile(self, control_signal):
-        self.filename = self.filename_start + "_"+str(control_signal[0])+"_"+str(control_signal[1]) + strftime("_%d_%m_%y_%H_%M_%S.pkl")
+        """Open the log file"""
+        self.filename = self.datapath / ("robot_data_"+str(control_signal[0])+"_"+str(control_signal[1]) + strftime("_%d_%m_%y_%H_%M_%S.pkl"))
         self.dictionary = {}
         for name in self.data_name_list:
             self.dictionary[name] = []
 
-        
-    # Log one time step of data
+
     def log(self, logging_switch_on, time, control_signal, robot_sensor_signal, camera_sensor_signal):
+        """ Log one time step of data"""
         if not logging_switch_on:
             if self.currently_logging:
                 self.currently_logging = False
@@ -277,7 +278,7 @@ class Robot:
         self.msg_sender = None
         self.msg_receiver = None
         self.camera_sensor = CameraSensor(parameters.camera_id)
-        self.data_logger = DataLogger(parameters.filename_start, parameters.data_name_list)
+        self.data_logger = DataLogger(parameters.datapath, parameters.data_name_list)
         self.robot_sensor_signal = RobotSensorSignal([0, 0, 0])
         self.camera_sensor_signal = [0,0,0,0,0,0]
         print("New robot!")

@@ -68,3 +68,6 @@ line-length = 88
 exclude = [
   "src/robot_arduino_code"
 ]
+
+[tool.setuptools.package-data]
+"*" = ["data/*"]

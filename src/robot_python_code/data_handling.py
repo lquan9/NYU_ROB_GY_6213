@@ -6,11 +6,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Local libraries
-from . import robot_python_code, motion_models
+from robot_python_code import motion_models, robot
 
 def get_file_data(filename):
     """ Open a file and return data in a form ready to plot"""
-    data_loader = robot_python_code.DataLoader(filename)
+    data_loader = robot.DataLoader(filename)
     data_dict = data_loader.load()
 
     # The dictionary should have keys ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']
@@ -32,7 +32,7 @@ def get_file_data(filename):
 def plot_trial_basics(filename):
     """For a given trial, plot the encoder counts, velocities, steering angles"""
     time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
- 
+
     plt.plot(time_list, encoder_count_list)
     plt.title('Encoder Values')
     plt.show()

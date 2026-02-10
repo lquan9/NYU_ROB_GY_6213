@@ -14,7 +14,7 @@ from nicegui import ui, app, run
 from fastapi import Response
 
 # Local libraries
-from . import parameters, robot_python_code
+from robot_python_code import robot, parameters
 
 matplotlib.use('Agg') # Force non-interactive backend
 
@@ -58,7 +58,7 @@ def main_page():
     """Main page of the GUI."""
 
     # Robot variables
-    robot = robot_python_code.Robot()
+    robot_instance = robot.Robot()
 
     # Lidar data
     max_lidar_range = 12
@@ -96,9 +96,9 @@ def main_page():
 
     # Convert lidar data to something visible in correct units. This is dummy data for lab 1.
     def update_lidar_data():
-        for i in range(robot.robot_sensor_signal.num_lidar_rays):
-            distance_in_mm = robot.robot_sensor_signal.distances[i]
-            angle = 360-robot.robot_sensor_signal.angles[i]
+        for i in range(robot_instance.robot_sensor_signal.num_lidar_rays):
+            distance_in_mm = robot_instance.robot_sensor_signal.distances[i]
+            angle = 360-robot_instance.robot_sensor_signal.angles[i]
             if distance_in_mm > 20 and abs(angle) < 360:
                 index = max(0,min(int(360/lidar_angle_res-1),int((angle-(lidar_angle_res/2))/lidar_angle_res)))
                 lidar_distance_list[index] = distance_in_mm/1000
@@ -107,20 +107,20 @@ def main_page():
     def update_commands():
 
         # Experiment trial controls
-        if robot.running_trial:
-            delta_time = get_time_in_ms() - robot.trial_start_time
+        if robot_instance.running_trial:
+            delta_time = get_time_in_ms() - robot_instance.trial_start_time
             if delta_time > parameters.trial_time:
-                robot.running_trial = False
+                robot_instance.running_trial = False
                 speed_switch.value = False
                 steering_switch.value = False
-                robot.extra_logging = True
+                robot_instance.extra_logging = True
                 print("End Trial :", delta_time)
 
-        if robot.extra_logging:
-            delta_time = get_time_in_ms() - robot.trial_start_time
+        if robot_instance.extra_logging:
+            delta_time = get_time_in_ms() - robot_instance.trial_start_time
             if delta_time > parameters.trial_time + parameters.extra_trial_log_time:
                 logging_switch.value = False
-                robot.extra_logging = False
+                robot_instance.extra_logging = False
 
         # Regular slider controls
         if speed_switch.value:
@@ -136,19 +136,19 @@ def main_page():
     def update_connection_to_robot():
         """Update"""
         if udp_switch.value:
-            if not robot.connected_to_hardware:
-                udp, udp_success = robot_python_code.create_udp_communication(parameters.arduinoIP, parameters.localIP, parameters.arduinoPort, parameters.localPort, parameters.bufferSize)
+            if not robot_instance.connected_to_hardware:
+                udp, udp_success = robot_instance.create_udp_communication(parameters.arduinoIP, parameters.localIP, parameters.arduinoPort, parameters.localPort, parameters.bufferSize)
                 if udp_success:
-                    robot.setup_udp_connection(udp)
-                    robot.connected_to_hardware = True
+                    robot_instance.setup_udp_connection(udp)
+                    robot_instance.connected_to_hardware = True
                     print("Should be set for UDP!")
                 else:
                     udp_switch.value = False
-                    robot.connected_to_hardware = False
+                    robot_instance.connected_to_hardware = False
         else:
-            if robot.connected_to_hardware:
-                robot.eliminate_udp_connection()
-                robot.connected_to_hardware = False
+            if robot_instance.connected_to_hardware:
+                robot_instance.eliminate_udp_connection()
+                robot_instance.connected_to_hardware = False
 
     def enable_speed():
         """Update the speed slider if steering is not enabled."""
@@ -185,8 +185,8 @@ def main_page():
             plt.ylim(-2,2)
 
     def run_trial():
-        robot.trial_start_time = get_time_in_ms()
-        robot.running_trial = True
+        robot_instance.trial_start_time = get_time_in_ms()
+        robot_instance.running_trial = True
         steering_switch.value = True
         speed_switch.value = True
         logging_switch.value = True
@@ -254,8 +254,8 @@ def main_page():
     async def control_loop():
         update_connection_to_robot()
         cmd_speed, cmd_steering_angle = update_commands()
-        robot.control_loop(cmd_speed, cmd_steering_angle, logging_switch.value)
-        encoder_count_label.set_text(robot.robot_sensor_signal.encoder_counts)
+        robot_instance.control_loop(cmd_speed, cmd_steering_angle, logging_switch.value)
+        encoder_count_label.set_text(robot_instance.robot_sensor_signal.encoder_counts)
         # update_lidar_data()
         # show_lidar_plot()
         update_video(video_image)

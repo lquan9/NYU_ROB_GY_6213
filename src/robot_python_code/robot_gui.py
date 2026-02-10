@@ -14,7 +14,7 @@ from nicegui import ui, app, run
 from fastapi import Response
 
 # Local libraries
-from robot_python_code import robot, parameters
+from robot_python_code import robot, parameters, data_handling
 
 matplotlib.use('Agg') # Force non-interactive backend
 
@@ -203,52 +203,90 @@ def main_page():
 
         print("Start time:", robot.trial_start_time)
 
+    trial_data_dir = parameters.datapath
+    print(f"Looking for trial data in: {trial_data_dir}")
+    if not trial_data_dir.exists():
+        print("Trial data directory does not exist.")
+        trial_data_dir = Path(__file__).resolve().parents[2] / 'data'
+    trial_files = data_handling.get_trial_files(trial_data_dir)
 
     # Create the gui title bar
-    with ui.card().classes('w-full  items-center'):
+    with ui.card().classes('w-full items-center'):
         ui.label('ROB-GY - 6213: Robot Navigation & Localization').style('font-size: 24px;')
 
-    # Create the encoder sensor visualizations. These may be dummys for lab 01.
-    with ui.card().classes('w-full'):
-        with ui.grid(columns=3).classes('w-full items-center'):
-            with ui.card().classes('w-full items-center h-60'):
-                if STREAM_VIDEO:
-                    video_image = ui.interactive_image('/video/frame').classes('w-full h-full')
+    with ui.tabs().classes('w-full') as tabs:
+        control_tab = ui.tab('Robot Control')
+        plot_tab = ui.tab('Data Plots')
+        sim_tab = ui.tab('Sim')
+
+    with ui.tab_panels(tabs, value=control_tab).classes('w-full'):
+        with ui.tab_panel(control_tab):
+            # Create the encoder sensor visualizations. These may be dummys for lab 01.
+            with ui.card().classes('w-full'):
+                with ui.grid(columns=3).classes('w-full items-center'):
+                    with ui.card().classes('w-full items-center h-60'):
+                        if STREAM_VIDEO:
+                            video_image = ui.interactive_image('/video/frame').classes('w-full h-full')
+                        else:
+                            ui.image('assets/a_robot_image.jpg').props('height=2')
+                            video_image = None
+                    # with ui.card().classes('w-full items-center h-60'):
+                    #     main_plot = ui.pyplot(figsize=(3, 3))
+                    with ui.card().classes('items-center h-60'):
+                        ui.label('Encoder:').style('text-align: center;')
+                        encoder_count_label = ui.label('0')
+                        logging_switch = ui.switch('Data Logging ')
+                        udp_switch = ui.switch('Robot Connect')
+                        run_trial_button = ui.button('Run Trial', on_click=lambda:run_trial())
+
+            # Create the robot manual control slider and switch for speed
+            with ui.card().classes('w-full'):
+                with ui.grid(columns=4).classes('w-full'):
+                    with ui.card().classes('w-full items-center'):
+                        ui.label('SPEED:').style('text-align: center;')
+                    with ui.card().classes('w-full items-center'):
+                        slider_speed = ui.slider(min=0, max=100, value=0)
+                    with ui.card().classes('w-full items-center'):
+                        ui.label().bind_text_from(slider_speed, 'value').style('text-align: center;')
+                    with ui.card().classes('w-full items-center'):
+                        speed_switch = ui.switch('Enable', on_change=lambda: enable_speed())
+
+            # Create the robot manual control slider and switch for steering
+            with ui.card().classes('w-full'):
+                with ui.grid(columns=4).classes('w-full'):
+                    with ui.card().classes('w-full items-center'):
+                        ui.label('STEER:').style('text-align: center;')
+                    with ui.card().classes('w-full items-center'):
+                        slider_steering = ui.slider(min=-20, max=20, value=0)
+                    with ui.card().classes('w-full items-center'):
+                        ui.label().bind_text_from(slider_steering, 'value').style('text-align: center;')
+                    with ui.card().classes('w-full items-center'):
+                        steering_switch = ui.switch('Enable', on_change=lambda: enable_steering())
+
+        with ui.tab_panel(plot_tab):
+            with ui.card().classes('w-full'):
+                ui.label('Logged Trials').style('font-size: 20px;')
+                if trial_files:
+                    trial_selector = ui.select(
+                        options={file: Path(file).name for file in trial_files},
+                        value=trial_files[0],
+                        label='Select a trial file',
+                    ).classes('w-full')
                 else:
-                    ui.image('assets/a_robot_image.jpg').props('height=2')
-                    video_image = None
-            # with ui.card().classes('w-full items-center h-60'):
-            #     main_plot = ui.pyplot(figsize=(3, 3))
-            with ui.card().classes('items-center h-60'):
-                ui.label('Encoder:').style('text-align: center;')
-                encoder_count_label = ui.label('0')
-                logging_switch = ui.switch('Data Logging ')
-                udp_switch = ui.switch('Robot Connect')
-                run_trial_button = ui.button('Run Trial', on_click=lambda:run_trial())
+                    ui.label('No trial files found.').style('color: #ff7f7f')
 
-    # Create the robot manual control slider and switch for speed
-    with ui.card().classes('w-full'):
-        with ui.grid(columns=4).classes('w-full'):
-            with ui.card().classes('w-full items-center'):
-                ui.label('SPEED:').style('text-align: center;')
-            with ui.card().classes('w-full items-center'):
-                slider_speed = ui.slider(min=0, max=100, value=0)
-            with ui.card().classes('w-full items-center'):
-                ui.label().bind_text_from(slider_speed, 'value').style('text-align: center;')
-            with ui.card().classes('w-full items-center'):
-                speed_switch = ui.switch('Enable', on_change=lambda: enable_speed())
+        with ui.tab_panel(sim_tab):
+            with ui.card().classes('w-full'):
+                ui.label('Run Model Against Trials').style('font-size: 20px;')
+                ui.label(f'Data directory: {trial_data_dir}')
 
-    # Create the robot manual control slider and switch for steering
-    with ui.card().classes('w-full'):
-        with ui.grid(columns=4).classes('w-full'):
-            with ui.card().classes('w-full items-center'):
-                ui.label('STEER:').style('text-align: center;')
-            with ui.card().classes('w-full items-center'):
-                slider_steering = ui.slider(min=-20, max=20, value=0)
-            with ui.card().classes('w-full items-center'):
-                ui.label().bind_text_from(slider_steering, 'value').style('text-align: center;')
-            with ui.card().classes('w-full items-center'):
-                steering_switch = ui.switch('Enable', on_change=lambda: enable_steering())
+            sim = ui.label('Ready')
+
+            with ui.grid(columns=2).classes('w-full gap-2'):
+                ui.button(
+                    'Sample Data',
+                    on_click=lambda: sim.set_text('Run model'),
+                ).props('color=primary')
 
     # Update slider values, plots, etc. and run robot control loop
     async def control_loop():

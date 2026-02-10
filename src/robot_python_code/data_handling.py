@@ -28,6 +28,12 @@ def get_file_data(filename):
 
     return time_list, encoder_count_list, velocity_list, steering_angle_list
 
+def get_trial_files(trial_data_dir):
+    """Return sorted trial log files from data path."""
+    trial_path = Path(trial_data_dir)
+    if not trial_path.exists():
+        return []
+    return sorted(str(path) for path in trial_path.glob('robot_data_*.pkl'))
 
 def plot_trial_basics(filename):
     """For a given trial, plot the encoder counts, velocities, steering angles"""

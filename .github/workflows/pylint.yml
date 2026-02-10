@@ -33,4 +33,5 @@ jobs:
       with:
         lint-path: src/**/*.py
         python-version: "3.12"
+        pylintrc-path: .pylintrc
         args: "--extension-pkg-whitelist=cv2"

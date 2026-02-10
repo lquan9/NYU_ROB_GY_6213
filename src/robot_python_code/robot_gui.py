@@ -336,16 +336,23 @@ def main_page():
 
 def main():
     """ Entry point for GUI """
+    favicon_path = ASSETS_DIR / 'favicon.png' if ASSETS_DIR.exists() else None
     ui.run(reload=False,
            host='0.0.0.0',
            port=8080,
            show=False,
            title="ROB-GY 6213 Robot Navigation & Localization",
+           favicon=str(favicon_path) if favicon_path else None,
            )
 
 # Run the gui
 # ui.run(native=True)
 if __name__ in {"__main__", "__mp_main__"}:
-    ui.run(reload=False, port=8080, show=True)
+    favicon_path = ASSETS_DIR / 'favicon.png' if ASSETS_DIR.exists() else None
+    ui.run(reload=False,
+           port=8080,
+           show=True,
+           title="ROB6213",
+           favicon=str(favicon_path) if favicon_path else None)
 
     main()

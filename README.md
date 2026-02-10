@@ -15,10 +15,11 @@ Primarily used to solve labs for the NYU course ROB-GY 6213: Robot Localization 
 > <sup>
 > Authors are with New York University - Tandon School of Engineering
 > <br> 6 MetroTech Center, Brooklyn, NY. 
-> <br> All have contributed equally to this work.
 > </sup>
 > 
 > [Code](https://github.com/lquan9/NYU_ROB_GY_6213) | [Docs](./docs)
+
+<!--![BTF Robot](docs/assets/a_robot_image.jpg)-->
 
 # Quick Start
 ## Pre-requisites

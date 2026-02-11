@@ -1,0 +1,78 @@
+{
+  "data_directory": "../data/data_straight/btf",
+  "encoder_trials": [
+    {
+      "log_file": "robot_data_40_0_07_02_26_00_13_40.pkl",
+      "distance_m": 1.753
+    },
+    {
+      "log_file": "robot_data_40_0_07_02_26_00_15_20.pkl",
+      "distance_m": 3.581
+    },
+    {
+      "log_file": "robot_data_40_0_07_02_26_00_18_41.pkl",
+      "distance_m": 5.423
+    },
+    {
+      "log_file": "robot_data_40_0_07_02_26_00_21_20.pkl",
+      "distance_m": 7.061
+    },
+    {
+      "log_file": "robot_data_50_0_07_02_26_00_25_23.pkl",
+      "distance_m": 2.489
+    },
+    {
+      "log_file": "robot_data_50_0_07_02_26_00_28_29.pkl",
+      "distance_m": 5.029
+    },
+    {
+      "log_file": "robot_data_50_0_07_02_26_00_30_41.pkl",
+      "distance_m": 7.557
+    },
+    {
+      "log_file": "robot_data_50_0_07_02_26_00_36_09.pkl",
+      "distance_m": 9.919
+    },
+    {
+      "log_file": "robot_data_60_0_07_02_26_00_38_48.pkl",
+      "distance_m": 3.048
+    },
+    {
+      "log_file": "robot_data_60_0_07_02_26_00_40_29.pkl",
+      "distance_m": 6.020
+    },
+    {
+      "log_file": "robot_data_60_0_07_02_26_00_43_03.pkl",
+      "distance_m": 9.017
+    },
+    {
+      "log_file": "robot_data_60_0_07_02_26_00_18_41.pkl",
+      "distance_m": 12.497
+    },
+    {
+      "log_file": "robot_data_75_0_07_02_26_00_45_10.pkl",
+      "distance_m": 3.404
+    },
+    {
+      "log_file": "robot_data_75_0_07_02_26_00_00_43.pkl",
+      "distance_m": 6.883
+    },
+    {
+      "log_file": "robot_data_75_0_07_02_26_00_03_00.pkl",
+      "distance_m": 10.236
+    },
+    {
+      "log_file": "robot_data_100_0_07_02_26_00_48_30.pkl",
+      "distance_m": 3.759
+    },
+    {
+      "log_file": "robot_data_100_0_07_02_26_00_57_44.pkl",
+      "distance_m": 7.315
+    }
+  ],
+  "steering_trials": [
+  ],
+  "output": {
+    "results_file": "calibration_results.json"
+  }
+}

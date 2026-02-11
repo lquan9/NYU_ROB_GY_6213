@@ -46,9 +46,11 @@ gui = "robot_python_code.robot_gui:main"
 
 [tool.hatch.build.targets.wheel.force-include]
 "docs/assets" = "robot_python_code/assets"
+"configs" = "robot_python_code/configs"
 
 [tool.hatch.build.targets.sdist.force-include]
 "docs/assets" = "robot_python_code/assets"
+"configs" = "robot_python_code/configs"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/robot_python_code"]

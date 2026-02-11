@@ -38,7 +38,7 @@
       "distance_m": 3.048
     },
     {
-      "log_file": "robot_data_60_0_07_02_26_00_40_29.pkl",
+      "log_file": "robot_data_60_0_07_02_26_00_40_20.pkl",
       "distance_m": 6.020
     },
     {
@@ -46,23 +46,23 @@
       "distance_m": 9.017
     },
     {
-      "log_file": "robot_data_60_0_07_02_26_00_18_41.pkl",
+      "log_file": "robot_data_60_0_07_02_26_00_45_10.pkl",
       "distance_m": 12.497
     },
     {
-      "log_file": "robot_data_75_0_07_02_26_00_45_10.pkl",
-      "distance_m": 3.404
-    },
-    {
-      "log_file": "robot_data_75_0_07_02_26_00_00_43.pkl",
+      "log_file": "robot_data_75_0_07_02_26_01_00_43.pkl",
       "distance_m": 6.883
     },
     {
-      "log_file": "robot_data_75_0_07_02_26_00_03_00.pkl",
+      "log_file": "robot_data_75_0_07_02_26_01_03_00.pkl",
       "distance_m": 10.236
     },
     {
-      "log_file": "robot_data_100_0_07_02_26_00_48_30.pkl",
+      "log_file": "robot_data_75_0_07_02_26_01_05_06.pkl",
+      "distance_m": 10.236
+    },
+    {
+      "log_file": "robot_data_100_0_07_02_26_00_50_23.pkl",
       "distance_m": 3.759
     },
     {

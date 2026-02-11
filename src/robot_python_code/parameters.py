@@ -33,8 +33,7 @@ trial_time = 4000 # milliseconds
 trial_input = -15 # delta for steering, u_x for distance
 
 # MM parameters
-# counts_to_m: distance traveled per encoder count (2*pi*r / counts_per_revolution)
-counts_to_m = 0.000 #TODO: calibrate
+counts_to_m = 0.000295
 distance_variance_a = 0.0001
 distance_variance_b = 0.01
 steering_to_w = 0.0 #TODO: calibrate

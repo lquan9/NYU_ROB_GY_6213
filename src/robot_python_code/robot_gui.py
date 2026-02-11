@@ -9,12 +9,13 @@ import math
 import matplotlib
 import cv2
 import numpy as np
+import tempfile
 
 from nicegui import ui, app, run
 from fastapi import Response
 
 # Local libraries
-from robot_python_code import robot, parameters, data_handling
+from robot_python_code import robot, parameters, data_handling, calibrate
 
 matplotlib.use('Agg') # Force non-interactive backend
 
@@ -102,9 +103,9 @@ def main_page():
             if distance_in_mm > 20 and abs(angle) < 360:
                 index = max(0,min(int(360/lidar_angle_res-1),int((angle-(lidar_angle_res/2))/lidar_angle_res)))
                 lidar_distance_list[index] = distance_in_mm/1000
- 
-    # Determine what speed and steering commands to send
+
     def update_commands():
+        """Determin what speed and steering commands to send"""
 
         # Experiment trial controls
         if robot_instance.running_trial:
@@ -137,7 +138,11 @@ def main_page():
         """Update"""
         if udp_switch.value:
             if not robot_instance.connected_to_hardware:
-                udp, udp_success = robot_instance.create_udp_communication(parameters.arduinoIP, parameters.localIP, parameters.arduinoPort, parameters.localPort, parameters.bufferSize)
+                udp, udp_success = robot_instance.create_udp_communication(parameters.arduinoIP,
+                                                                           parameters.localIP,
+                                                                           parameters.arduinoPort,
+                                                                           parameters.localPort,
+                                                                           parameters.bufferSize)
                 if udp_success:
                     robot_instance.setup_udp_connection(udp)
                     robot_instance.connected_to_hardware = True
@@ -318,10 +323,74 @@ def main_page():
                     with ui.card().classes('w-full items-center'):
                         steering_switch = ui.switch('Enable', on_change=lambda: enable_steering())
 
+        # calibration
         with ui.tab_panel(calibration_tab):
             with ui.card().classes('w-full'):
                 ui.label('Motion Model Calibration').style('font-size: 20px;')
                 ui.label('Calibrate motion model parameters based on trial data')
+
+            with ui.card().classes('w-full'):
+                ui.label('Run Calibration').style('font-size: 16px; font-weight: bold;')
+
+                # store custom config path
+                custom_config_path = None
+                config_label = ui.label('Using default config: calibrate_base.json').style('font-size: 12px; color: gray;')
+
+                def handle_config_upload(e):
+                    """Handle custom config file upload"""
+                    nonlocal custom_config_path
+                    if e.content:
+                        try:
+                            # Save uploaded file temporarily
+                            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                                f.write(e.content.read().decode('utf-8'))
+                                custom_config_path = f.name
+                            config_label.text = f'Using custom config: {e.name}'
+                            config_label.style('font-size: 12px; color: lightgreen;')
+                            ui.notify(f'Config loaded: {e.name}', type='positive')
+                        except Exception as ex:
+                            ui.notify(f'Error loading config: {str(ex)}', type='negative')
+                            custom_config_path = None
+
+                def reset_to_default_config():
+                    """Reset to default config"""
+                    nonlocal custom_config_path
+                    custom_config_path = None
+                    config_label.text = 'Using default config: calibrate_base.json'
+                    config_label.style('font-size: 12px; color: gray;')
+                    ui.notify('Reset to default config', type='info')
+
+                def run_encoder_calibration():
+                    """Run encoder calibration"""
+                    try:
+                        if custom_config_path:
+                            config = calibrate.load_config(custom_config_path)
+                        else:
+                            config = calibrate.load_config()
+                        result = calibrate.calibrate_encoder(config)
+
+                        if result:
+                            # update
+                            parameters.counts_to_m = result['value']
+                            counts_to_m_input.value = result['value']
+
+                            message = f"Encoder calibration complete!\n"
+                            message += f"counts_to_m = {result['value']:.6f}, {result['std']:.6f}\n"
+                            message += f"Based on {len(result['trials'])} trials"
+                            ui.notify(message, type='positive', multi_line=True, timeout=5000)
+                            print(f"Calibration complete: counts_to_m = {result['value']:.6f}")
+                        else:
+                            ui.notify('No valid calibration trials found', type='warning')
+                    except Exception as e:
+                        ui.notify(f'Calibration error: {str(e)}', type='negative')
+                        print(f"Error during calibration: {e}")
+
+                with ui.column().classes('gap-2'):
+                    ui.button('Calibrate Encoders', on_click=run_encoder_calibration, icon='straighten').props('color=primary')
+                    with ui.row().classes('items-center gap-2'):
+                        ui.upload(on_upload=handle_config_upload,
+                                  auto_upload=True).props('accept=.json').classes('max-w-xs').tooltip('Upload custom config')
+                        ui.button('Reset Config', on_click=reset_to_default_config, icon='refresh').props('flat color=grey')
 
             # encoder and distance
             with ui.card().classes('w-full'):

@@ -220,64 +220,83 @@ def calibrate_steering(config):
     """Calibrate steering from circular path trials"""
 
     data_dir = Path(config['data_directory'])
-    # Resolve relative paths relative to config file location
     if not data_dir.is_absolute():
         data_dir = (config['_config_dir'] / data_dir).resolve()
 
-    trials = config['calibration_trials']['steering_angular']
+    trials = config['steering_trials']
 
     results = []
 
     for trial in trials:
-        if parameters.DEBUG_PRINTS:
-            print(f"Processing: {trial['name']}")
-        log_file = data_dir / trial['log_file']
+        # if parameters.DEBUG_PRINTS:
+        #     print(f"Processing: {trial['name']}")
+        # log_file = data_dir / trial['log_file']
 
-        if not log_file.exists():
-            print(f"Log file not found: {log_file}")
-            continue
+        # if not log_file.exists():
+        #     print(f"Log file not found: {log_file}")
+        #     continue
 
-        time_list, encoder_list, velocity_list, steering_list = data_handling.get_file_data(str(log_file))
+        # time_list, encoder_list, velocity_list, steering_list = data_handling.get_file_data(str(log_file))
 
-        measured_radius = trial['ground_truth']['measured_radius_m']
-        steering_cmd = trial['ground_truth']['steering_command']
+        ground_truth_yaw = np.deg2rad(trial['measured_yaw_deg'])
 
-        # calculate distance traveled
-        time_normalized = data_handling.normalize_time(time_list)
-        total_time = time_normalized[-1] - time_normalized[0]
+        # time_normalized = data_handling.normalize_time(time_list)
+        # total_time = time_normalized[-1] - time_normalized[0]
 
-        encoder_change = abs(encoder_list[-1] - encoder_list[0])
+        # use hardcoded values for now from config
+        # avg_steering_cmd = np.mean(steering_list)
+        # avg_speed = np.mean(velocity_list)
+        avg_steering_cmd = trial.get('average_steering_cmd')
+        avg_speed = trial.get('average_speed')
+        total_time = trial.get('total_time')
 
-        # use current counts_to_m estimate or from config
-        if parameters.counts_to_m > 0:
-            distance_traveled = encoder_change / parameters.counts_to_m
-        else:
-            print(f"Encoders not calibrated yet, skipping steering calibration")
-            continue
+        # calculate angular velocity
+        angular_velocity = ground_truth_yaw / total_time if total_time > 0 else 0
 
-        angle_traveled = distance_traveled / measured_radius
-        avg_angular_velocity = angle_traveled / total_time if total_time > 0 else 0
-
-        # steering_to_w
-        if abs(steering_cmd) > 0:
-            steering_to_w = avg_angular_velocity / abs(steering_cmd)
-
+        if abs(avg_steering_cmd) > 0:
             results.append({
-                'trial': trial['name'],
-                'steering_to_w': steering_to_w,
-                'steering_cmd': steering_cmd,
-                'radius': measured_radius
+                # 'trial': trial['name'],
+                'steering_cmd': avg_steering_cmd,
+                'trial_time': total_time,
+                'final_yaw': ground_truth_yaw,
+                'speed': avg_speed,
+                'angular_velocity': angular_velocity
             })
 
     if results:
-        steering_to_w_values = [r['steering_to_w'] for r in results]
-        mean_steering_to_w = np.mean(steering_to_w_values)
-        std_steering_to_w = np.std(steering_to_w_values)
+        steering_cmds = np.array([r['steering_cmd'] for r in results])
+        angular_velocities = np.array([r['angular_velocity'] for r in results])
+
+        # w = steering_to_w * alpha
+        # weighted least squares through origin
+        steering_to_w = np.sum(steering_cmds * angular_velocities) / np.sum(steering_cmds ** 2) if np.sum(steering_cmds ** 2) > 0 else 0
+
+        predicted_w = steering_to_w * steering_cmds
+        residuals = angular_velocities - predicted_w
+        squared_errors = residuals ** 2
+
+        # variance
+        abs_steering = np.abs(steering_cmds)
+        A = np.vstack([np.ones(len(abs_steering)), abs_steering]).T
+        variance_coeffs, _, _, _ = np.linalg.lstsq(A, squared_errors, rcond=None)
+        steering_variance_a = variance_coeffs[0]
+        steering_variance_b = variance_coeffs[1]
+
+        if parameters.DEBUG_PRINTS:
+            print(f"Steering Calibration Results:")
+            print(f"Number of trials: {len(results)}")
+            print(f"steering_to_w: {steering_to_w:.4f} rad/s per steering unit")
+            print(f"steering_variance_a: {steering_variance_a:.6f} (rad/s)^2")
+            print(f"steering_variance_b: {steering_variance_b:.6f} (rad/s)^2 per steering unit")
+
+            for i, r in enumerate(results):
+                print(f"{i+1}. {r['trial']}: alpha={r['steering_cmd']:.1f}, w={r['angular_velocity']:.4f} rad/s")
 
         return {
             'parameter': 'steering_to_w',
-            'value': mean_steering_to_w,
-            'std': std_steering_to_w,
+            'value': steering_to_w,
+            'steering_variance_a': steering_variance_a,
+            'steering_variance_b': steering_variance_b,
             'trials': results
         }
     else:

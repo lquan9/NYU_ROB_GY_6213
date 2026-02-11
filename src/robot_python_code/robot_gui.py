@@ -436,8 +436,40 @@ def main_page():
                         ui.notify(f'Calibration error: {str(e)}', type='negative')
                         print(f"Error during calibration: {e}")
 
+                def run_steering_calibration():
+                    """Run steering calibration"""
+                    try:
+                        if custom_config_path:
+                            config = calibrate.load_config(custom_config_path)
+                        else:
+                            config = calibrate.load_config()
+                        result = calibrate.calibrate_steering(config)
+
+                        if result:
+                            parameters.steering_to_w = result['value']
+                            steering_to_w_input.value = result['value']
+                            parameters.steering_variance_a = result['steering_variance_a']
+                            steering_var_a_input.value = result['steering_variance_a']
+                            parameters.steering_variance_b = result['steering_variance_b']
+                            steering_var_b_input.value = result['steering_variance_b']
+
+                            message = f"Steering calibration complete!\n"
+                            message += f"steering_to_w = {result['value']:.4f} rad/s per unit\n"
+                            message += f"steering_variance_a = {result['steering_variance_a']:.6f} (rad/s)^2\n"
+                            message += f"steering_variance_b = {result['steering_variance_b']:.6f}\n"
+                            message += f"Based on {len(result['trials'])} trials"
+                            ui.notify(message, type='positive', multi_line=True, timeout=8000)
+                            print(f"Steering calibration complete: steering_to_w = {result['value']:.6f}")
+                        else:
+                            ui.notify('No valid calibration trials found', type='warning')
+                    except Exception as e:
+                        ui.notify(f'Steering calibration error: {str(e)}', type='negative')
+                        print(f"Error during steering calibration: {e}")
+
                 with ui.column().classes('gap-2'):
-                    ui.button('Calibrate Encoders', on_click=run_encoder_calibration, icon='straighten').props('color=primary')
+                    with ui.row().classes('items-center gap-2'):
+                        ui.button('Calibrate Encoders', on_click=run_encoder_calibration, icon='straighten').props('color=primary')
+                        ui.button('Calibrate Steering', on_click=run_steering_calibration, icon='pivot_table_chart').props('color=primary')
                     # with ui.row().classes('items-center gap-2'):
                         # ui.upload(on_upload=handle_config_upload,
                         #           auto_upload=True).props('accept=.json').classes('max-w-xs').tooltip('Upload custom config')

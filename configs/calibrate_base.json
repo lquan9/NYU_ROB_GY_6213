@@ -71,6 +71,132 @@
     }
   ],
   "steering_trials": [
+    {
+      "log_file": "",
+      "measured_yaw_deg": -28.2,
+      "average_steering_cmd": -20,
+      "average_speed": 40,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -19.0,
+      "average_steering_cmd": -15.0,
+      "average_speed": 40,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -2.1,
+      "average_steering_cmd": -10.0,
+      "average_speed": 40,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 3.4,
+      "average_steering_cmd": 10.0,
+      "average_speed": 40,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 9.3,
+      "average_steering_cmd": 15.0,
+      "average_speed": 40,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 20.4,
+      "average_steering_cmd": 20.0,
+      "average_speed": 40,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -74.7,
+      "average_steering_cmd": -20,
+      "average_speed": 60,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -42.0,
+      "average_steering_cmd": -15.0,
+      "average_speed": 60,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -15,
+      "average_steering_cmd": -10.0,
+      "average_speed": 60,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 4.5,
+      "average_steering_cmd": 10.0,
+      "average_speed": 60,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 17.6,
+      "average_steering_cmd": 15.0,
+      "average_speed": 60,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 38.6,
+      "average_steering_cmd": 20.0,
+      "average_speed": 60,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -90,
+      "average_steering_cmd": -20,
+      "average_speed": 75,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -42.5,
+      "average_steering_cmd": -15.0,
+      "average_speed": 75,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -18,
+      "average_steering_cmd": -10.0,
+      "average_speed": 75,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 23.5,
+      "average_steering_cmd": 10.0,
+      "average_speed": 75,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 25.7,
+      "average_steering_cmd": 15.0,
+      "average_speed": 75,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 40.9,
+      "average_steering_cmd": 20.0,
+      "average_speed": 75,
+      "total_time": 15.0
+    }
   ],
   "output": {
     "results_file": "calibration_results.json"

@@ -573,7 +573,7 @@ def main_page():
                     create_trial_selector(trial_files,
                                           build_sim_plots,
                                           "Single Run")
-                    ui.button("Multi-Predict", on_click=lambda: data_handling.plot_many_trial_predictions(str(trial_data_dir)))
+                    ui.button("Multi-Predict", on_click=lambda: data_handling.plot_many_trial_predictions(trial_data_dir))
                     ui.button("Sample Model", on_click=lambda: data_handling.sample_model(model_plot.fig))
                 ui.label('Predicted Distance').style('font-size: 16px; font-weight: bold;')
                 predicted_distance_label = ui.label('--').style('font-size: 24px; color: cyan;')

@@ -50,15 +50,15 @@ def get_trial_files(trial_data_dir):
         return []
     return sorted(str(path) for path in trial_path.glob('robot_data_*.pkl'))
 
-def check_trial_has_motion(filename):
+def check_trial_has_motion(trial_filename):
     """Check if a trial file has motion data"""
     try:
-        time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
+        _, encoder_count_list, _, _ = get_file_data(trial_filename)
         encoder_change = max(encoder_count_list) - min(encoder_count_list)
         has_motion = encoder_change > 10
         return has_motion, encoder_change
     except Exception as e:
-        print(f"Error checking {filename}: {e}")
+        print(f"Error checking {trial_filename}: {e}")
         return False, 0
 
 def normalize_time(time_list):
@@ -72,9 +72,9 @@ def normalize_time(time_list):
         return time_normalized
     return time_list
 
-def plot_trial_basics(fig, filename):
+def plot_trial_basics(fig, trial_filename):
     """For a given trial, plot the encoder counts, velocities, steering angles"""
-    time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
+    time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(trial_filename)
 
     time_normalized = normalize_time(time_list)
 
@@ -127,11 +127,11 @@ def plot_trial_basics(fig, filename):
     fig.tight_layout()
 
 
-def run_my_model_on_trial(fig, filename, plot_color='c-'):
+def run_my_model_on_trial(fig, trial_filename, plot_color='c-'):
     """Plot a trajectory using the motion model, input data from a single trial."""
     if parameters.DEBUG_PRINTS:
-        print(f"Loading file: {filename}")
-    time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
+        print(f"Loading file: {trial_filename}")
+    time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(trial_filename)
     if parameters.DEBUG_PRINTS:
         print(f"Data loaded - {len(time_list)} time steps")
         print(f"Time range: {time_list[0]} to {time_list[-1]}")
@@ -149,7 +149,7 @@ def run_my_model_on_trial(fig, filename, plot_color='c-'):
     motion_model = motion_models.AckermannMM([0, 0, 0])
     if parameters.DEBUG_PRINTS:
         print(f"Motion model initialized at [0, 0, 0]")
-    x_list, y_list, theta_list = motion_model.traj_propagation(time_normalized,
+    x_list, y_list, _ = motion_model.traj_propagation(time_normalized,
                                                                encoder_count_list,
                                                                steering_angle_list)
     if parameters.DEBUG_PRINTS:
@@ -182,24 +182,26 @@ def run_my_model_on_trial(fig, filename, plot_color='c-'):
     fig.tight_layout()
 
 
-def plot_many_trial_predictions(directory):
+def plot_many_trial_predictions(trial_dir):
     """Iterate through many trials and plot them as trajectories with motion model"""
-    directory_path = Path(directory)
+    if parameters.DEBUG_PRINTS:
+        print(f"Plotting trials from directory: {trial_dir}")
+
     plot_color_list = ['r.','k.','g.','c.', 'b.',
                        'r.','k.','g.','c.', 'b.',
                        'r.','k.','g.','c.', 'b.',
                        'r.','k.','g.','c.', 'b.']
     count = 0
-    for item in directory_path.iterdir():
-        filename = item.name
+    for item in trial_dir.iterdir():
+        trial_filename = item.name
         plot_color = plot_color_list[count]
-        run_my_model_on_trial(directory + filename, False, plot_color)
+        run_my_model_on_trial(trial_dir + trial_filename, False, plot_color)
         count += 1
     plt.show()
 
-def run_my_model_to_predict_distance(filename):
+def run_my_model_to_predict_distance(trial_filename):
     """ Calculate the predicted distance from single trial for a motion model."""
-    time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
+    time_list, encoder_count_list, _, steering_angle_list = get_file_data(trial_filename)
     motion_model = motion_models.AckermannMM([0,0,0], 0)
     x_list, _, _ = motion_model.traj_propagation(time_list, encoder_count_list, steering_angle_list)
     distance = x_list[-30]
@@ -226,15 +228,15 @@ def get_diff_squared(m_list,p_list):
     return diff_squared_list
 
 
-def process_files_and_plot(files_and_data, directory):
+def process_files_and_plot(file_data_list, data_directory):
     """Open files, plot them to predict with the motion model and compare with real values"""
     predicted_distance_list = []
     measured_distance_list = []
-    for row in files_and_data:
-        filename = row[0]
+    for row in file_data_list:
+        trial_filename = row[0]
         measured_distance = row[1]
         measured_distance_list.append(measured_distance)
-        predicted_distance = run_my_model_to_predict_distance(directory + filename)
+        predicted_distance = run_my_model_to_predict_distance(data_directory + trial_filename)
         predicted_distance_list.append(predicted_distance)
 
     # Plot predicted and measured distance travelled.
@@ -259,7 +261,7 @@ def sample_model(fig, num_samples=200):
     traj_duration = 10
     for i in range(num_samples):
         model = motion_models.AckermannMM([0,0,0], 0)
-        traj_x, traj_y, traj_theta = model.generate_simulated_traj(traj_duration)
+        traj_x, traj_y, _ = model.generate_simulated_traj(traj_duration)
         ax.plot(traj_x, traj_y, 'k.', markersize=1)
 
     ax.set_title('Sampling the model', color='white')
@@ -274,8 +276,8 @@ def sample_model(fig, num_samples=200):
 def get_trial_metrics(trial_files):
     """Compute aggregate metrics for trial files used in dashboard plots."""
     trial_metrics = []
-    for filename in trial_files:
-        trial_time, trial_encoder, trial_velocity, trial_steering = get_file_data(filename)
+    for trial_file in trial_files:
+        trial_time, trial_encoder, trial_velocity, trial_steering = get_file_data(trial_file)
         if len(trial_time) < 2:
             continue
         duration = trial_time[-1] - trial_time[0]
@@ -283,7 +285,7 @@ def get_trial_metrics(trial_files):
         avg_speed = float(np.mean(trial_velocity))
         avg_abs_steer = float(np.mean(np.abs(trial_steering)))
         trial_metrics.append({
-            'filename': Path(filename).name,
+            'filename': Path(trial_file).name,
             'duration': duration,
             'net_encoder': net_encoder,
             'avg_speed': avg_speed,

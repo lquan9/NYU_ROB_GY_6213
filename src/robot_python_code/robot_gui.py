@@ -220,14 +220,17 @@ def main_page():
         with selected_trial_plot:
             data_handling.plot_trial_basics(selected_trial_plot.fig, selected_file)
 
-        with aggregate_plot:
-            data_handling.plot_trial_aggregates(aggregate_plot.fig, trial_metrics)
+        # with aggregate_plot:
+        #     data_handling.plot_trial_aggregates(aggregate_plot.fig, trial_metrics)
 
     def build_sim_plots(selected_file):
         """ Build sim plots"""
         if not selected_file:
             ui.dialog('No trial file selected.').open()
             return
+
+        d_pred = data_handling.run_my_model_to_predict_distance(selected_file)
+        predicted_distance_label.text = f'{d_pred:.3f} m'
 
         with model_plot:
             data_handling.run_my_model_on_trial(model_plot.fig, selected_file)
@@ -556,7 +559,7 @@ def main_page():
                                                        "Generate")
 
             selected_trial_plot = ui.pyplot(figsize=(8, 5)).classes('w-full')
-            aggregate_plot = ui.pyplot(figsize=(8, 5)).classes('w-full')
+            # aggregate_plot = ui.pyplot(figsize=(4, 4)).classes('w-full')
 
             if trial_files and trial_selector:
                 trial_selector.on_value_change(lambda event: build_trial_plots(event.value))
@@ -564,13 +567,18 @@ def main_page():
 
         with ui.tab_panel(sim_tab):
             with ui.card().classes('w-full'):
-                ui.label('Run Model Against Trials').style('font-size: 20px;')
+                ui.label('Run Model Using Data').style('font-size: 20px;')
                 ui.label(f'Data directory: {trial_data_dir}')
-                create_trial_selector(trial_files,
-                                      build_sim_plots,
-                                      "Run Model")
+                with ui.row():
+                    create_trial_selector(trial_files,
+                                          build_sim_plots,
+                                          "Single Run")
+                    ui.button("Multi-Predict", on_click=lambda: data_handling.plot_many_trial_predictions(str(trial_data_dir)))
+                    ui.button("Sample Model", on_click=lambda: data_handling.sample_model(model_plot.fig))
+                ui.label('Predicted Distance').style('font-size: 16px; font-weight: bold;')
+                predicted_distance_label = ui.label('--').style('font-size: 24px; color: cyan;')
 
-            model_plot = ui.pyplot(figsize=(8, 5)).classes('w-full')
+            model_plot = ui.pyplot(figsize=(5, 5)).classes('w-full')
 
             with model_plot:
                 model_plot.fig.patch.set_facecolor('black')
@@ -579,9 +587,6 @@ def main_page():
                 ax.set_xlim(0, 1)
                 ax.set_ylim(0, 1)
                 ax.axis('off')
-
-            with ui.card().classes('w-full'):
-                ui.label('Sample Model').style('font-size: 20px;')
 
     # Update slider values, plots, etc. and run robot control loop
     async def control_loop():

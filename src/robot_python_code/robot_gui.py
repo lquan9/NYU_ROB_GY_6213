@@ -235,6 +235,16 @@ def main_page():
         with model_plot:
             data_handling.run_my_model_on_trial(model_plot.fig, selected_file)
 
+    def run_multi_predict():
+        """Run multi-predict plotting"""
+        with model_plot:
+            data_handling.plot_many_trial_predictions(model_plot.fig, trial_data_dir)
+
+    def run_sample_model():
+        """Run sample model plotting"""
+        with model_plot:
+            data_handling.sample_model(model_plot.fig)
+
     def stop_trial():
         robot_instance.running_trial = False
         robot_instance.extra_logging = False
@@ -573,8 +583,8 @@ def main_page():
                     create_trial_selector(trial_files,
                                           build_sim_plots,
                                           "Single Run")
-                    ui.button("Multi-Predict", on_click=lambda: data_handling.plot_many_trial_predictions(trial_data_dir))
-                    ui.button("Sample Model", on_click=lambda: data_handling.sample_model(model_plot.fig))
+                    ui.button("Multi-Predict", on_click=lambda: run_multi_predict())
+                    ui.button("Sample Model", on_click=lambda: run_sample_model())
                 ui.label('Predicted Distance').style('font-size: 16px; font-weight: bold;')
                 predicted_distance_label = ui.label('--').style('font-size: 24px; color: cyan;')
 

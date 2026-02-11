@@ -182,22 +182,47 @@ def run_my_model_on_trial(fig, trial_filename, plot_color='c-'):
     fig.tight_layout()
 
 
-def plot_many_trial_predictions(trial_dir):
+def plot_many_trial_predictions(fig, trial_dir):
     """Iterate through many trials and plot them as trajectories with motion model"""
     if parameters.DEBUG_PRINTS:
         print(f"Plotting trials from directory: {trial_dir}")
 
-    plot_color_list = ['r.','k.','g.','c.', 'b.',
-                       'r.','k.','g.','c.', 'b.',
-                       'r.','k.','g.','c.', 'b.',
-                       'r.','k.','g.','c.', 'b.']
+    plot_color_list = ['r-','k-','g-','c-', 'b-',
+                       'r-','k-','g-','c-', 'b-',
+                       'r-','k-','g-','c-', 'b-',
+                       'r-','k-','g-','c-', 'b-']
+
+    fig.patch.set_facecolor('black')
+    fig.clf()
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_facecolor('black')
+    ax.tick_params(colors='white')
+    ax.grid(True, color='gray', alpha=0.3)
+
     count = 0
-    for item in trial_dir.iterdir():
-        trial_filename = item.name
-        plot_color = plot_color_list[count]
-        run_my_model_on_trial(trial_dir + trial_filename, False, plot_color)
-        count += 1
-    plt.show()
+    for item in sorted(trial_dir.iterdir()):
+        if item.is_file() and item.suffix == '.pkl':
+            trial_filename = trial_dir / item.name
+            plot_color = plot_color_list[count % len(plot_color_list)]
+
+            try:
+                time_list, encoder_count_list, _, steering_angle_list = get_file_data(trial_filename)
+                time_normalized = normalize_time(time_list)
+                motion_model = motion_models.AckermannMM([0, 0, 0])
+                x_list, y_list, _ = motion_model.traj_propagation(time_normalized,
+                                                                   encoder_count_list,
+                                                                   steering_angle_list)
+                ax.plot(x_list, y_list, plot_color, linewidth=1.5, alpha=0.7)
+                count += 1
+            except Exception as e:
+                if parameters.DEBUG_PRINTS:
+                    print(f"Error processing {trial_filename}: {e}")
+
+    ax.set_title('Motion Model Predicted XY Trajectories (m)', color='white')
+    ax.set_xlabel('X (m)', color='white')
+    ax.set_ylabel('Y (m)', color='white')
+    ax.set_aspect('equal', adjustable='box')
+    fig.tight_layout()
 
 def run_my_model_to_predict_distance(trial_filename):
     """ Calculate the predicted distance from single trial for a motion model."""

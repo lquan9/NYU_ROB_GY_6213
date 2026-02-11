@@ -33,13 +33,13 @@ trial_time = 15000 # milliseconds
 trial_input = -20 # delta for steering, u_x for distance
 
 # MM parameters
-counts_to_m = 0.000295
+counts_to_m = 3518
 distance_variance_a = 0.0001
 distance_variance_b = 0.01
-steering_to_w = 0.0 #TODO: calibrate
-steering_variance_a = 0.001
-steering_variance_b = 0.01
+steering_to_w = 0.0024
+steering_variance_a = 0.0001
+steering_variance_b = -0.000635
 wheelbase = 0.1444
 track_width = 0.150
 wheel_radius = 0.034
-max_steer_deg = 30.0
+max_steer_deg = 20.0

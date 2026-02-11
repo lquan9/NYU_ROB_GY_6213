@@ -182,8 +182,8 @@ def calibrate_encoder(config):
         plt.tight_layout()
 
         # Save plot
-        output_dir = Path('calibration_plots')
-        output_dir.mkdir(exist_ok=True)
+        output_dir = Path('docs') / 'assets' / 'calibration_plots'
+        output_dir.mkdir(exist_ok=True, parents=True)
         plot_file = output_dir / 'encoder_calibration.png'
         plt.savefig(plot_file, facecolor='black', edgecolor='white', dpi=150)
         print(f"Calibration plot saved to: {plot_file}")

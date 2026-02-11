@@ -415,12 +415,12 @@ def main_page():
                             message += f"distance_variance_a = {result['distance_variance_a']:.6f}\n"
                             message += f"distance_variance_b = {result['distance_variance_b']:.6f}\n"
                             message += f"Based on {len(result['trials'])} trials\n"
-                            message += f"Plot saved to calibration_plots/encoder_calibration.png"
+                            message += f"Plot saved to assets/calibration_plots/encoder_calibration.png"
                             ui.notify(message, type='positive', multi_line=True, timeout=8000)
                             print(f"Calibration complete: counts_to_m = {result['value']:.6f}")
 
                             # load and display the calibration plot
-                            plot_path = Path('calibration_plots/encoder_calibration.png')
+                            plot_path = Path('docs/assets/calibration_plots/encoder_calibration.png')
                             if plot_path.exists():
                                 with calib_plot:
                                     calib_plot.fig.clear()

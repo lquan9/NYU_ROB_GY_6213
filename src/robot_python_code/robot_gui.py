@@ -336,6 +336,25 @@ def main_page():
                 custom_config_path = None
                 config_label = ui.label('Using default config: calibrate_base.json').style('font-size: 12px; color: gray;')
 
+                # Calibration results display
+                results_container = ui.card().classes('w-full').style('display: none;')
+                with results_container:
+                    ui.label('Calibration Results').style('font-size: 14px; font-weight: bold; color: lightgreen;')
+                    results_grid = ui.grid(columns=2).classes('w-full gap-2')
+                    with results_grid:
+                        ui.label('counts_to_m:').style('color: lightgray;')
+                        counts_result_label = ui.label('--').style('color: white; font-family: monospace;')
+                        ui.label('std deviation:').style('color: lightgray;')
+                        counts_std_label = ui.label('--').style('color: white; font-family: monospace;')
+                        ui.label('distance_variance_a:').style('color: lightgray;')
+                        var_a_result_label = ui.label('--').style('color: white; font-family: monospace;')
+                        ui.label('distance_variance_b:').style('color: lightgray;')
+                        var_b_result_label = ui.label('--').style('color: white; font-family: monospace;')
+                        ui.label('trials:').style('color: lightgray;')
+                        trials_result_label = ui.label('--').style('color: white; font-family: monospace;')
+                        ui.label('plot:').style('color: lightgray;')
+                        plot_result_label = ui.label('--').style('color: white; font-family: monospace;')
+
                 def handle_config_upload(e):
                     """Handle custom config file upload"""
                     nonlocal custom_config_path
@@ -370,14 +389,29 @@ def main_page():
                         result = calibrate.calibrate_encoder(config)
 
                         if result:
-                            # update
+                            # update parameters
                             parameters.counts_to_m = result['value']
                             counts_to_m_input.value = result['value']
+                            parameters.distance_variance_a = result['distance_variance_a']
+                            distance_var_a_input.value = result['distance_variance_a']
+                            parameters.distance_variance_b = result['distance_variance_b']
+                            distance_var_b_input.value = result['distance_variance_b']
+
+                            results_container.style('display: block;')
+                            counts_result_label.text = f"{result['value']:.6f} m/count"
+                            counts_std_label.text = f"{result['std']:.6f}"
+                            var_a_result_label.text = f"{result['distance_variance_a']:.6f} m^2"
+                            var_b_result_label.text = f"{result['distance_variance_b']:.6f}"
+                            trials_result_label.text = f"{len(result['trials'])} trials"
+                            plot_result_label.text = "encoder_calibration.png"
 
                             message = f"Encoder calibration complete!\n"
                             message += f"counts_to_m = {result['value']:.6f}, {result['std']:.6f}\n"
-                            message += f"Based on {len(result['trials'])} trials"
-                            ui.notify(message, type='positive', multi_line=True, timeout=5000)
+                            message += f"distance_variance_a = {result['distance_variance_a']:.6f}\n"
+                            message += f"distance_variance_b = {result['distance_variance_b']:.6f}\n"
+                            message += f"Based on {len(result['trials'])} trials\n"
+                            message += f"Plot saved to calibration_plots/encoder_calibration.png"
+                            ui.notify(message, type='positive', multi_line=True, timeout=8000)
                             print(f"Calibration complete: counts_to_m = {result['value']:.6f}")
                         else:
                             ui.notify('No valid calibration trials found', type='warning')

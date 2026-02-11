@@ -5,6 +5,10 @@ import sys
 from pathlib import Path
 import numpy as np
 from importlib.resources import files
+import matplotlib
+import matplotlib.pyplot as plt
+
+matplotlib.use('Agg')
 
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
@@ -92,16 +96,80 @@ def calibrate_encoder(config):
         counts_to_m_values = [r['counts_to_m'] for r in results]
         mean_counts_to_m = np.mean(counts_to_m_values)
         std_counts_to_m = np.std(counts_to_m_values)
+
+        encoder_counts = np.array([r['encoder_change'] for r in results])
+        distances = np.array([r['distance'] for r in results])
+
+        plt.style.use('dark_background')
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
+        fig.patch.set_facecolor('black')
+
+        ax1.scatter(encoder_counts, distances, color='cyan', s=50, label='Measured Data', zorder=3)
+
+        # fitted line
+        max_encoder = np.max(encoder_counts) * 1.1
+        encoder_line = np.array([0, max_encoder])
+        distance_line = encoder_line * mean_counts_to_m
+        ax1.plot(encoder_line, distance_line, 'r-', linewidth=2, label=f's = {mean_counts_to_m:.6f} * e')
+
+        ax1.set_xlabel('Encoder Counts (e)', color='white', fontsize=12)
+        ax1.set_ylabel('Distance (s) [m]', color='white', fontsize=12)
+        ax1.set_title('Distance vs Encoder', color='white', fontsize=14, fontweight='bold')
+        ax1.grid(True, alpha=0.3, color='gray')
+        ax1.legend(facecolor='black', edgecolor='white')
+        ax1.set_facecolor('black')
+
+        # calc variance
+        predicted_distances = encoder_counts * mean_counts_to_m
+        residuals = distances - predicted_distances
+        squared_errors = residuals ** 2
+
+        # sigma_s^2 = a + b * e
+        # fit sigma_s^2 = distance_variance_a + distance_variance_b * encoder_counts
+        A = np.vstack([np.ones(len(encoder_counts)), encoder_counts]).T
+        variance_coeffs, _, _, _ = np.linalg.lstsq(A, squared_errors, rcond=None)
+        distance_variance_a = variance_coeffs[0]
+        distance_variance_b = variance_coeffs[1]
+
+        # variance vs encoder
+        ax2.scatter(encoder_counts, squared_errors, color='yellow', s=50, label='Squared Errors', zorder=3)
+
+        # fit variance line
+        predicted_variance = distance_variance_a + distance_variance_b * encoder_line
+        ax2.plot(encoder_line, predicted_variance, 'r-', linewidth=2,
+                label=f'\sigma^2 = {distance_variance_a:.6f} + {distance_variance_b:.6f} * e')
+
+        ax2.set_xlabel('Encoder Counts (e)', color='white', fontsize=12)
+        ax2.set_ylabel('Variance σ²ₛ [m²]', color='white', fontsize=12)
+        ax2.set_title('Variance vs Encoder', color='white', fontsize=14, fontweight='bold')
+        ax2.grid(True, alpha=0.3, color='gray')
+        ax2.legend(facecolor='black', edgecolor='white')
+        ax2.set_facecolor('black')
+
+        plt.tight_layout()
+
+        # Save plot
+        output_dir = Path('calibration_plots')
+        output_dir.mkdir(exist_ok=True)
+        plot_file = output_dir / 'encoder_calibration.png'
+        plt.savefig(plot_file, facecolor='black', edgecolor='white', dpi=150)
+        print(f"Calibration plot saved to: {plot_file}")
+        plt.close()
+
         if parameters.DEBUG_PRINTS:
             print(f"Number of trials: {len(results)}")
             print(f"Mean counts_to_m: {mean_counts_to_m:.6f} m/count")
             print(f"Std deviation: {std_counts_to_m:.6f} m/count")
             print(f"Coefficient of variation: {(std_counts_to_m/mean_counts_to_m)*100:.2f}%")
+            print(f"Distance variance_a: {distance_variance_a:.6f} m^2")
+            print(f"Distance variance_b: {distance_variance_b:.6f} m^2/count")
 
         return {
             'parameter': 'counts_to_m',
             'value': mean_counts_to_m,
             'std': std_counts_to_m,
+            'distance_variance_a': distance_variance_a,
+            'distance_variance_b': distance_variance_b,
             'trials': results
         }
     else:

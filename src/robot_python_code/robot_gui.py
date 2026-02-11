@@ -398,15 +398,15 @@ def main_page():
                             distance_var_b_input.value = result['distance_variance_b']
 
                             results_container.style('display: block;')
-                            counts_result_label.text = f"{result['value']:.6f} m/count"
-                            counts_std_label.text = f"{result['std']:.6f}"
+                            counts_result_label.text = f"{result['value']:.0f} counts/m"
+                            counts_std_label.text = f"{result['std']:.0f}"
                             var_a_result_label.text = f"{result['distance_variance_a']:.6f} m^2"
                             var_b_result_label.text = f"{result['distance_variance_b']:.6f}"
                             trials_result_label.text = f"{len(result['trials'])} trials"
                             plot_result_label.text = "encoder_calibration.png"
 
                             message = f"Encoder calibration complete!\n"
-                            message += f"counts_to_m = {result['value']:.6f}, {result['std']:.6f}\n"
+                            message += f"counts_to_m = {result['value']:.0f}, {result['std']:.0f} counts/m\n"
                             message += f"distance_variance_a = {result['distance_variance_a']:.6f}\n"
                             message += f"distance_variance_b = {result['distance_variance_b']:.6f}\n"
                             message += f"Based on {len(result['trials'])} trials\n"
@@ -431,10 +431,10 @@ def main_page():
                 ui.label('Encoder & Distance Parameters').style('font-size: 16px; font-weight: bold;')
                 with ui.grid(columns=2).classes('w-full'):
                     with ui.column():
-                        ui.label('counts_to_m (m/count)')
-                        counts_to_m_input = ui.number(value=parameters.counts_to_m, format='%.6f',
+                        ui.label('counts_to_m (counts/m)')
+                        counts_to_m_input = ui.number(value=parameters.counts_to_m, format='%.1f',
                                                       on_change=lambda e: setattr(parameters, 'counts_to_m', e.value))
-                        ui.label('Formula: measured_distance / encoder_count_change').style('font-size: 12px; color: gray;')
+                        ui.label('Formula: encoder_count_change / measured_distance').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('distance_variance_a (m^2)')

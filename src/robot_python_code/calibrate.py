@@ -74,13 +74,13 @@ def calibrate_encoder(config):
         # ground truth distance
         ground_truth_distance = trial['distance_m']
 
-        # counts_to_m
+        # counts_to_m (counts per meter)
         if encoder_change > 0:
-            counts_to_m = ground_truth_distance / encoder_change
+            counts_to_m = encoder_change / ground_truth_distance
             if parameters.DEBUG_PRINTS:
                 print(f"Ground truth distance: {ground_truth_distance:.3f} m")
                 print(f"Encoder change: {encoder_change} counts")
-                print(f"Calculated counts_to_m: {counts_to_m:.6f} m/count")
+                print(f"Calculated counts_to_m: {counts_to_m:.6f} counts/m")
 
             results.append({
                 'log_file': trial['log_file'],
@@ -109,8 +109,8 @@ def calibrate_encoder(config):
         # fitted line
         max_encoder = np.max(encoder_counts) * 1.1
         encoder_line = np.array([0, max_encoder])
-        distance_line = encoder_line * mean_counts_to_m
-        ax1.plot(encoder_line, distance_line, 'r-', linewidth=2, label=f's = {mean_counts_to_m:.6f} * e')
+        distance_line = encoder_line / mean_counts_to_m
+        ax1.plot(encoder_line, distance_line, 'r-', linewidth=2, label=f's = e / {mean_counts_to_m:.1f}')
 
         ax1.set_xlabel('Encoder Counts (e)', color='white', fontsize=12)
         ax1.set_ylabel('Distance (s) [m]', color='white', fontsize=12)
@@ -120,7 +120,7 @@ def calibrate_encoder(config):
         ax1.set_facecolor('black')
 
         # calc variance
-        predicted_distances = encoder_counts * mean_counts_to_m
+        predicted_distances = encoder_counts / mean_counts_to_m
         residuals = distances - predicted_distances
         squared_errors = residuals ** 2
 
@@ -158,8 +158,8 @@ def calibrate_encoder(config):
 
         if parameters.DEBUG_PRINTS:
             print(f"Number of trials: {len(results)}")
-            print(f"Mean counts_to_m: {mean_counts_to_m:.6f} m/count")
-            print(f"Std deviation: {std_counts_to_m:.6f} m/count")
+            print(f"Mean counts_to_m: {mean_counts_to_m:.1f} counts/m")
+            print(f"Std deviation: {std_counts_to_m:.1f} counts/m")
             print(f"Coefficient of variation: {(std_counts_to_m/mean_counts_to_m)*100:.2f}%")
             print(f"Distance variance_a: {distance_variance_a:.6f} m^2")
             print(f"Distance variance_b: {distance_variance_b:.6f} m^2/count")
@@ -210,7 +210,7 @@ def calibrate_steering(config):
 
         # use current counts_to_m estimate or from config
         if parameters.counts_to_m > 0:
-            distance_traveled = encoder_change * parameters.counts_to_m
+            distance_traveled = encoder_change / parameters.counts_to_m
         else:
             print(f"Encoders not calibrated yet, skipping steering calibration")
             continue

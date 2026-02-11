@@ -7,6 +7,7 @@ import time
 import asyncio
 import math
 import matplotlib
+import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 import tempfile
@@ -157,37 +158,35 @@ def main_page():
 
     def enable_speed():
         """Update the speed slider if steering is not enabled."""
-        #if not speed_switch.value:
-        #    slider_speed.value = 0
-        d = 0
+        if not speed_switch.value:
+            slider_speed.value = 0
 
     def enable_steering():
         """Update the steering slider if steering is not enabled."""
-        #if not steering_switch.value:
-        #    slider_steering.value = 0
-        d = 0
+        if not steering_switch.value:
+            slider_steering.value = 0
 
-    def show_lidar_plot():
-        """ Visualize the lidar scans"""
-        with main_plot:
-            fig = main_plot.fig
-            fig.patch.set_facecolor('black')
-            plt.clf()
-            plt.style.use('dark_background')
-            plt.tick_params(axis='x', colors='lightgray')
-            plt.tick_params(axis='y', colors='lightgray')
+    # def show_lidar_plot():
+    #     """ Visualize the lidar scans"""
+    #     with main_plot:
+    #         fig = main_plot.fig
+    #         fig.patch.set_facecolor('black')
+    #         plt.clf()
+    #         plt.style.use('dark_background')
+    #         plt.tick_params(axis='x', colors='lightgray')
+    #         plt.tick_params(axis='y', colors='lightgray')
 
-            for i in range(num_angles):
-                distance = lidar_distance_list[i]
-                cos_ang = lidar_cos_angle_list[i]
-                sin_ang = lidar_sin_angle_list[i]
-                x = [distance * cos_ang, max_lidar_range * cos_ang]
-                y = [distance * sin_ang, max_lidar_range * sin_ang]
-                plt.plot(x, y, 'r')
-            plt.grid(True)
-            #plt.axis('equal')
-            plt.xlim(-2,2)
-            plt.ylim(-2,2)
+    #         for i in range(num_angles):
+    #             distance = lidar_distance_list[i]
+    #             cos_ang = lidar_cos_angle_list[i]
+    #             sin_ang = lidar_sin_angle_list[i]
+    #             x = [distance * cos_ang, max_lidar_range * cos_ang]
+    #             y = [distance * sin_ang, max_lidar_range * sin_ang]
+    #             plt.plot(x, y, 'r')
+    #         plt.grid(True)
+    #         #plt.axis('equal')
+    #         plt.xlim(-2,2)
+    #         plt.ylim(-2,2)
 
     def run_trial():
         robot_instance.trial_start_time = get_time_in_ms()
@@ -231,7 +230,6 @@ def main_page():
 
         with model_plot:
             data_handling.run_my_model_on_trial(model_plot.fig, selected_file)
-
 
     def stop_trial():
         robot_instance.running_trial = False
@@ -326,10 +324,6 @@ def main_page():
         # calibration
         with ui.tab_panel(calibration_tab):
             with ui.card().classes('w-full'):
-                ui.label('Motion Model Calibration').style('font-size: 20px;')
-                ui.label('Calibrate motion model parameters based on trial data')
-
-            with ui.card().classes('w-full'):
                 ui.label('Run Calibration').style('font-size: 16px; font-weight: bold;')
 
                 # store custom config path
@@ -355,29 +349,39 @@ def main_page():
                         ui.label('plot:').style('color: lightgray;')
                         plot_result_label = ui.label('--').style('color: white; font-family: monospace;')
 
-                def handle_config_upload(e):
-                    """Handle custom config file upload"""
-                    nonlocal custom_config_path
-                    if e.content:
-                        try:
-                            # Save uploaded file temporarily
-                            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-                                f.write(e.content.read().decode('utf-8'))
-                                custom_config_path = f.name
-                            config_label.text = f'Using custom config: {e.name}'
-                            config_label.style('font-size: 12px; color: lightgreen;')
-                            ui.notify(f'Config loaded: {e.name}', type='positive')
-                        except Exception as ex:
-                            ui.notify(f'Error loading config: {str(ex)}', type='negative')
-                            custom_config_path = None
+                    calib_plot = ui.pyplot(figsize=(10, 10)).classes('w-full')
 
-                def reset_to_default_config():
-                    """Reset to default config"""
-                    nonlocal custom_config_path
-                    custom_config_path = None
-                    config_label.text = 'Using default config: calibrate_base.json'
-                    config_label.style('font-size: 12px; color: gray;')
-                    ui.notify('Reset to default config', type='info')
+                    with calib_plot:
+                        calib_plot.fig.patch.set_facecolor('black')
+                        ax = calib_plot.fig.add_subplot(1, 1, 1)
+                        ax.set_facecolor('black')
+                        ax.set_xlim(0, 1)
+                        ax.set_ylim(0, 1)
+                        ax.axis('off')
+
+                # def handle_config_upload(e):
+                #     """Handle custom config file upload"""
+                #     nonlocal custom_config_path
+                #     if e.content:
+                #         try:
+                #             # Save uploaded file temporarily
+                #             with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                #                 f.write(e.content.read().decode('utf-8'))
+                #                 custom_config_path = f.name
+                #             config_label.text = f'Using custom config: {e.name}'
+                #             config_label.style('font-size: 12px; color: lightgreen;')
+                #             ui.notify(f'Config loaded: {e.name}', type='positive')
+                #         except Exception as ex:
+                #             ui.notify(f'Error loading config: {str(ex)}', type='negative')
+                #             custom_config_path = None
+
+                # def reset_to_default_config():
+                #     """Reset to default config"""
+                #     nonlocal custom_config_path
+                #     custom_config_path = None
+                #     config_label.text = 'Using default config: calibrate_base.json'
+                #     config_label.style('font-size: 12px; color: gray;')
+                #     ui.notify('Reset to default config', type='info')
 
                 def run_encoder_calibration():
                     """Run encoder calibration"""
@@ -406,13 +410,25 @@ def main_page():
                             plot_result_label.text = "encoder_calibration.png"
 
                             message = f"Encoder calibration complete!\n"
-                            message += f"counts_to_m = {result['value']:.0f}, {result['std']:.0f} counts/m\n"
+                            message += f"counts_to_m = {result['value']:.0f}, std: {result['std']:.0f} counts/m\n"
                             message += f"distance_variance_a = {result['distance_variance_a']:.6f}\n"
                             message += f"distance_variance_b = {result['distance_variance_b']:.6f}\n"
                             message += f"Based on {len(result['trials'])} trials\n"
                             message += f"Plot saved to calibration_plots/encoder_calibration.png"
                             ui.notify(message, type='positive', multi_line=True, timeout=8000)
                             print(f"Calibration complete: counts_to_m = {result['value']:.6f}")
+
+                            # load and display the calibration plot
+                            plot_path = Path('calibration_plots/encoder_calibration.png')
+                            if plot_path.exists():
+                                with calib_plot:
+                                    calib_plot.fig.clear()
+                                    img = plt.imread(str(plot_path))
+                                    ax = calib_plot.fig.add_subplot(1, 1, 1)
+                                    ax.imshow(img, interpolation='nearest')
+                                    ax.axis('off')
+                                    calib_plot.fig.tight_layout(pad=0)
+                                    calib_plot.update()
                         else:
                             ui.notify('No valid calibration trials found', type='warning')
                     except Exception as e:
@@ -421,10 +437,10 @@ def main_page():
 
                 with ui.column().classes('gap-2'):
                     ui.button('Calibrate Encoders', on_click=run_encoder_calibration, icon='straighten').props('color=primary')
-                    with ui.row().classes('items-center gap-2'):
-                        ui.upload(on_upload=handle_config_upload,
-                                  auto_upload=True).props('accept=.json').classes('max-w-xs').tooltip('Upload custom config')
-                        ui.button('Reset Config', on_click=reset_to_default_config, icon='refresh').props('flat color=grey')
+                    # with ui.row().classes('items-center gap-2'):
+                        # ui.upload(on_upload=handle_config_upload,
+                        #           auto_upload=True).props('accept=.json').classes('max-w-xs').tooltip('Upload custom config')
+                        # ui.button('Reset Config', on_click=reset_to_default_config, icon='refresh').props('flat color=grey')
 
             # encoder and distance
             with ui.card().classes('w-full'):
@@ -501,7 +517,10 @@ def main_page():
         with ui.tab_panel(plot_tab):
             with ui.card().classes('w-full'):
                 ui.label('Logged Trials').style('font-size: 20px;')
-                trial_selector = create_trial_selector(trial_files, build_trial_plots, "Generate")
+                ui.label(f'Data directory: {trial_data_dir}')
+                trial_selector = create_trial_selector(trial_files,
+                                                       build_trial_plots,
+                                                       "Generate")
 
             selected_trial_plot = ui.pyplot(figsize=(8, 5)).classes('w-full')
             aggregate_plot = ui.pyplot(figsize=(8, 5)).classes('w-full')
@@ -514,11 +533,9 @@ def main_page():
             with ui.card().classes('w-full'):
                 ui.label('Run Model Against Trials').style('font-size: 20px;')
                 ui.label(f'Data directory: {trial_data_dir}')
-
-            with ui.card().classes('w-full'):
-                sim_selector = create_trial_selector(trial_files,
-                                                     build_sim_plots,
-                                                     "Run Model")
+                create_trial_selector(trial_files,
+                                      build_sim_plots,
+                                      "Run Model")
 
             model_plot = ui.pyplot(figsize=(8, 5)).classes('w-full')
 

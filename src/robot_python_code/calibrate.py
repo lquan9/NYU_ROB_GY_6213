@@ -80,7 +80,7 @@ def calibrate_encoder(config):
             if parameters.DEBUG_PRINTS:
                 print(f"Ground truth distance: {ground_truth_distance:.3f} m")
                 print(f"Encoder change: {encoder_change} counts")
-                print(f"Calculated counts_to_m: {counts_to_m:.6f} counts/m")
+                print(f"Calculated counts_to_m: {counts_to_m:.0f} counts/m")
 
             results.append({
                 'log_file': trial['log_file'],
@@ -97,6 +97,24 @@ def calibrate_encoder(config):
         mean_counts_to_m = np.mean(counts_to_m_values)
         std_counts_to_m = np.std(counts_to_m_values)
 
+        # identify outliers using z-score method
+        z_scores = np.abs((np.array(counts_to_m_values) - mean_counts_to_m) / std_counts_to_m) if std_counts_to_m > 0 else np.zeros(len(counts_to_m_values))
+        outlier_threshold = 1.2  # threshold
+        outlier_indices = np.where(z_scores > outlier_threshold)[0]
+
+        outlier_files = []
+        for idx in outlier_indices:
+            results[idx]['is_outlier'] = True
+            results[idx]['z_score'] = z_scores[idx]
+            outlier_files.append(results[idx]['log_file'])
+
+        if len(outlier_indices) > 0:
+            print(f"\n{len(outlier_indices)} outlier(s) detected (z-score > {outlier_threshold}):")
+            for idx in outlier_indices:
+                r = results[idx]
+                print(f"- {r['log_file']}: counts_to_m = {r['counts_to_m']:.1f} (z-score: {z_scores[idx]:.2f})")
+            print(f"Mean: {outlier_threshold} range: {mean_counts_to_m:.1f} +/- {outlier_threshold * std_counts_to_m:.1f} counts/m\n")
+
         encoder_counts = np.array([r['encoder_change'] for r in results])
         distances = np.array([r['distance'] for r in results])
 
@@ -104,7 +122,16 @@ def calibrate_encoder(config):
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
         fig.patch.set_facecolor('black')
 
-        ax1.scatter(encoder_counts, distances, color='cyan', s=50, label='Measured Data', zorder=3)
+        # plot normal points
+        normal_mask = np.ones(len(results), dtype=bool)
+        normal_mask[outlier_indices] = False
+        ax1.scatter(encoder_counts[normal_mask], distances[normal_mask],
+                   color='cyan', s=50, label='Normal Data', zorder=3)
+
+        if len(outlier_indices) > 0:
+            ax1.scatter(encoder_counts[outlier_indices], distances[outlier_indices],
+                       color='red', s=100, marker='x', linewidths=3,
+                       label=f'Outliers (n={len(outlier_indices)})', zorder=4)
 
         # fitted line
         max_encoder = np.max(encoder_counts) * 1.1
@@ -112,8 +139,8 @@ def calibrate_encoder(config):
         distance_line = encoder_line / mean_counts_to_m
         ax1.plot(encoder_line, distance_line, 'r-', linewidth=2, label=f's = e / {mean_counts_to_m:.1f}')
 
-        ax1.set_xlabel('Encoder Counts (e)', color='white', fontsize=12)
-        ax1.set_ylabel('Distance (s) [m]', color='white', fontsize=12)
+        ax1.set_xlabel('Encoder Counts', color='white', fontsize=12)
+        ax1.set_ylabel('Distance [m]', color='white', fontsize=12)
         ax1.set_title('Distance vs Encoder', color='white', fontsize=14, fontweight='bold')
         ax1.grid(True, alpha=0.3, color='gray')
         ax1.legend(facecolor='black', edgecolor='white')
@@ -132,15 +159,21 @@ def calibrate_encoder(config):
         distance_variance_b = variance_coeffs[1]
 
         # variance vs encoder
-        ax2.scatter(encoder_counts, squared_errors, color='yellow', s=50, label='Squared Errors', zorder=3)
+        ax2.scatter(encoder_counts[normal_mask], squared_errors[normal_mask],
+                   color='yellow', s=50, label='Normal Data', zorder=3)
+
+        if len(outlier_indices) > 0:
+            ax2.scatter(encoder_counts[outlier_indices], squared_errors[outlier_indices],
+                       color='red', s=100, marker='x', linewidths=3,
+                       label=f'Outliers (n={len(outlier_indices)})', zorder=4)
 
         # fit variance line
         predicted_variance = distance_variance_a + distance_variance_b * encoder_line
         ax2.plot(encoder_line, predicted_variance, 'r-', linewidth=2,
-                label=f'\sigma^2 = {distance_variance_a:.6f} + {distance_variance_b:.6f} * e')
+                label=f'sigma^2 = {distance_variance_a:.6f} + {distance_variance_b:.6f} * e')
 
-        ax2.set_xlabel('Encoder Counts (e)', color='white', fontsize=12)
-        ax2.set_ylabel('Variance σ²ₛ [m²]', color='white', fontsize=12)
+        ax2.set_xlabel('Encoder Counts', color='white', fontsize=12)
+        ax2.set_ylabel('Variance [m^2]', color='white', fontsize=12)
         ax2.set_title('Variance vs Encoder', color='white', fontsize=14, fontweight='bold')
         ax2.grid(True, alpha=0.3, color='gray')
         ax2.legend(facecolor='black', edgecolor='white')
@@ -157,6 +190,7 @@ def calibrate_encoder(config):
         plt.close()
 
         if parameters.DEBUG_PRINTS:
+            print(f"Calibration Results:")
             print(f"Number of trials: {len(results)}")
             print(f"Mean counts_to_m: {mean_counts_to_m:.1f} counts/m")
             print(f"Std deviation: {std_counts_to_m:.1f} counts/m")
@@ -164,12 +198,18 @@ def calibrate_encoder(config):
             print(f"Distance variance_a: {distance_variance_a:.6f} m^2")
             print(f"Distance variance_b: {distance_variance_b:.6f} m^2/count")
 
+            if len(outlier_indices) > 0:
+                for i, r in enumerate(results):
+                    outlier_marker = " [OUTLIER]" if r.get('is_outlier', False) else ""
+                    print(f"{i+1}. {Path(r['log_file']).name}: {r['counts_to_m']:.1f} counts/m{outlier_marker}")
+
         return {
             'parameter': 'counts_to_m',
             'value': mean_counts_to_m,
             'std': std_counts_to_m,
             'distance_variance_a': distance_variance_a,
             'distance_variance_b': distance_variance_b,
+            'outliers': outlier_files,
             'trials': results
         }
     else:

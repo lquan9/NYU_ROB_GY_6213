@@ -265,6 +265,7 @@ def main_page():
 
     with ui.tabs().classes('w-full') as tabs:
         control_tab = ui.tab('Robot Control')
+        calibration_tab = ui.tab('Calibration')
         plot_tab = ui.tab('Data Plots')
         sim_tab = ui.tab('Simulation')
 
@@ -316,6 +317,83 @@ def main_page():
                         ui.label().bind_text_from(slider_steering, 'value').style('text-align: center;')
                     with ui.card().classes('w-full items-center'):
                         steering_switch = ui.switch('Enable', on_change=lambda: enable_steering())
+
+        with ui.tab_panel(calibration_tab):
+            with ui.card().classes('w-full'):
+                ui.label('Motion Model Calibration').style('font-size: 20px;')
+                ui.label('Calibrate motion model parameters based on trial data')
+
+            # encoder and distance
+            with ui.card().classes('w-full'):
+                ui.label('Encoder & Distance Parameters').style('font-size: 16px; font-weight: bold;')
+                with ui.grid(columns=2).classes('w-full'):
+                    with ui.column():
+                        ui.label('counts_to_m (m/count)')
+                        counts_to_m_input = ui.number(value=parameters.counts_to_m, format='%.6f',
+                                                      on_change=lambda e: setattr(parameters, 'counts_to_m', e.value))
+                        ui.label('Formula: measured_distance / encoder_count_change').style('font-size: 12px; color: gray;')
+
+                    with ui.column():
+                        ui.label('distance_variance_a (m^2)')
+                        distance_var_a_input = ui.number(value=parameters.distance_variance_a, format='%.6f',
+                                                        on_change=lambda e: setattr(parameters, 'distance_variance_a', e.value))
+                        ui.label('Base variance in distance measurement').style('font-size: 12px; color: gray;')
+
+                    with ui.column():
+                        ui.label('distance_variance_b')
+                        distance_var_b_input = ui.number(value=parameters.distance_variance_b, format='%.4f',
+                                                        on_change=lambda e: setattr(parameters, 'distance_variance_b', e.value))
+                        ui.label('Variance scaling factor').style('font-size: 12px; color: gray;')
+
+            # steering
+            with ui.card().classes('w-full'):
+                ui.label('Steering Parameters').style('font-size: 16px; font-weight: bold;')
+                with ui.grid(columns=2).classes('w-full'):
+                    with ui.column():
+                        ui.label('steering_to_w')
+                        steering_to_w_input = ui.number(value=parameters.steering_to_w, format='%.4f',
+                                                       on_change=lambda e: setattr(parameters, 'steering_to_w', e.value))
+                        ui.label('Converts steering command to angular velocity').style('font-size: 12px; color: gray;')
+
+                    with ui.column():
+                        ui.label('max_steer_deg (degrees)')
+                        max_steer_input = ui.number(value=parameters.max_steer_deg, format='%.1f',
+                                                   on_change=lambda e: setattr(parameters, 'max_steer_deg', e.value))
+                        ui.label('Maximum steering angle').style('font-size: 12px; color: gray;')
+
+                    with ui.column():
+                        ui.label('steering_variance_a (rad^2)')
+                        steering_var_a_input = ui.number(value=parameters.steering_variance_a, format='%.6f',
+                                                        on_change=lambda e: setattr(parameters, 'steering_variance_a', e.value))
+                        ui.label('Base variance in steering').style('font-size: 12px; color: gray;')
+
+                    with ui.column():
+                        ui.label('steering_variance_b')
+                        steering_var_b_input = ui.number(value=parameters.steering_variance_b, format='%.4f',
+                                                        on_change=lambda e: setattr(parameters, 'steering_variance_b', e.value))
+                        ui.label('Variance scaling factor').style('font-size: 12px; color: gray;')
+
+            # chasis
+            with ui.card().classes('w-full'):
+                ui.label('Base Parameters').style('font-size: 16px; font-weight: bold;')
+                with ui.grid(columns=3).classes('w-full'):
+                    with ui.column():
+                        ui.label('wheelbase (m)')
+                        wheelbase_input = ui.number(value=parameters.wheelbase, format='%.4f',
+                                                   on_change=lambda e: setattr(parameters, 'wheelbase', e.value))
+                        ui.label('Distance between front and rear axles').style('font-size: 12px; color: gray;')
+
+                    with ui.column():
+                        ui.label('track_width (m)')
+                        track_width_input = ui.number(value=parameters.track_width, format='%.4f',
+                                                     on_change=lambda e: setattr(parameters, 'track_width', e.value))
+                        ui.label('Distance between left and right wheels').style('font-size: 12px; color: gray;')
+
+                    with ui.column():
+                        ui.label('wheel_radius (m)')
+                        wheel_radius_input = ui.number(value=parameters.wheel_radius, format='%.4f',
+                                                      on_change=lambda e: setattr(parameters, 'wheel_radius', e.value))
+                        ui.label('Radius of the drive wheels').style('font-size: 12px; color: gray;')
 
         with ui.tab_panel(plot_tab):
             with ui.card().classes('w-full'):

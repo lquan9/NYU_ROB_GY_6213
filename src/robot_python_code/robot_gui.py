@@ -284,7 +284,10 @@ def main_page():
                     with ui.card().classes('items-center h-60'):
                         ui.label('Encoder:').style('text-align: center;')
                         encoder_count_label = ui.label('0')
-                        logging_switch = ui.switch('Data Logging ')
+                        with ui.row():
+                            logging_switch = ui.switch('Data Logging ')
+                            debug_switch = ui.switch('Debug Prints', value=parameters.DEBUG_PRINTS,
+                                                    on_change=lambda e: setattr(parameters, 'DEBUG_PRINTS', e.value))
                         udp_switch = ui.switch('Robot Connect')
                         with ui.row():
                             run_trial_button = ui.button('Run Trial', on_click=lambda:run_trial())

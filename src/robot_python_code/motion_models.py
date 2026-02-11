@@ -65,6 +65,7 @@ class AckermannMM:
                     steer=0.0,
         )-> tuple[float, float, float]:
         """Step update takes encoder, steering, and delta_t to produce a new state estimate"""
+        debug = parameters.DEBUG_PRINTS and (self.last_encoder_count == 0 or abs(encoder - self.last_encoder_count) > 0)
 
         # encoder delta update
         delta_count = encoder - self.last_encoder_count
@@ -74,6 +75,8 @@ class AckermannMM:
         s = distance_travelled_s(delta_count)
         var_s = variance_distance_travelled_s(s)
         s += random.gauss(0, math.sqrt(var_s))
+        if debug and encoder < 5:  # first few
+            print(f"step_update: delta_count={delta_count}, s={s:.5f}, delta_t={delta_t:.4f}")
 
         # rotational v update
         w = rotational_velocity_w(steer)
@@ -102,27 +105,41 @@ class AckermannMM:
         x += v * math.cos(theta) * delta_t
         y += v * math.sin(theta) * delta_t
 
+        if debug and encoder < 5:
+            print(f"v={v:.5f}, omega={omega:.5f}, new_pos: ({x:.5f}, {y:.5f}, {theta:.5f})")
+
         self.state = [x, y, theta]
         return self.state
 
     def traj_propagation(self, time_list, encoder_count_list, steering_angle_list):
         """This is a great tool to take in data from a trial and iterate over the data to create
         a robot trajectory in the global frame, using your motion model."""
+        if parameters.DEBUG_PRINTS:
+            print(f"Starting state: {self.state}")
+            print(f"Total iterations: {len(encoder_count_list) - 1}")
         x_list = [self.state[0]]
         y_list = [self.state[1]]
         theta_list = [self.state[2]]
         self.last_encoder_count = encoder_count_list[0]
+        if parameters.DEBUG_PRINTS:
+            print(f"Initial encoder: {self.last_encoder_count}")
         for i in range(1, len(encoder_count_list)):
             delta_t = time_list[i] - time_list[i-1]
-            new_state = self.step_update(encoder_count_list[i], steering_angle_list[i], delta_t)
+            if parameters.DEBUG_PRINTS and i <= 5:
+                print(f"Iter {i}: delta_t={delta_t:.4f}, encoder={encoder_count_list[i]}, steer={steering_angle_list[i]:.2f}")
+            new_state = self.step_update(delta_t, encoder_count_list[i], 0.0, steering_angle_list[i])
+            if parameters.DEBUG_PRINTS and i <= 5:
+                print(f"  -> new_state: x={new_state[0]:.4f}, y={new_state[1]:.4f}, theta={new_state[2]:.4f}")
             x_list.append(new_state[0])
             y_list.append(new_state[1])
             theta_list.append(new_state[2])
+        if parameters.DEBUG_PRINTS:
+            print(f"Final state: x={x_list[-1]:.4f}, y={y_list[-1]:.4f}, theta={theta_list[-1]:.4f}")
 
         return x_list, y_list, theta_list
 
-    # Coming soon
     def generate_simulated_traj(self, duration):
+        """Coming soon"""
         delta_t = 0.1
         t_list = []
         x_list = []

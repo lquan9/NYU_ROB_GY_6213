@@ -20,11 +20,26 @@ def get_file_data(filename):
     encoder_count_list = []
     velocity_list = []
     steering_angle_list = []
+    measured_steering_list = []
+
+    if parameters.DEBUG_PRINTS:
+        print(f"Data dict keys: {data_dict.keys()}")
+        print(f"Number of sensor signals: {len(robot_sensor_signal_list)}")
+        print(f"First sensor signal type: {type(robot_sensor_signal_list[0])}")
+        if hasattr(robot_sensor_signal_list[0], '__dict__'):
+            print(f"First sensor signal attributes: {robot_sensor_signal_list[0].__dict__}")
+
     for row in robot_sensor_signal_list:
         encoder_count_list.append(row.encoder_counts)
+        measured_steering_list.append(row.steering)
     for row in control_signal_list:
         velocity_list.append(row[0])
         steering_angle_list.append(row[1])
+
+    if parameters.DEBUG_PRINTS:
+        print(f"Encoder from sensors: {encoder_count_list[:5]} ... {encoder_count_list[-3:]}")
+        print(f"Measured steering from sensors: {measured_steering_list[:5]} ... {measured_steering_list[-3:]}")
+        print(f"Commanded steering from controls: {steering_angle_list[:5]} ... {steering_angle_list[-3:]}")
 
     return time_list, encoder_count_list, velocity_list, steering_angle_list
 
@@ -35,20 +50,33 @@ def get_trial_files(trial_data_dir):
         return []
     return sorted(str(path) for path in trial_path.glob('robot_data_*.pkl'))
 
-def plot_trial_basics(fig, filename):
-    """For a given trial, plot the encoder counts, velocities, steering angles"""
-    time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
+def check_trial_has_motion(filename):
+    """Check if a trial file has motion data"""
+    try:
+        time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
+        encoder_change = max(encoder_count_list) - min(encoder_count_list)
+        has_motion = encoder_change > 10
+        return has_motion, encoder_change
+    except Exception as e:
+        print(f"Error checking {filename}: {e}")
+        return False, 0
 
-    # some additional time logic, start time at 0
+def normalize_time(time_list):
+    """Normalize time to start at 0 and convert from milliseconds to seconds."""
     if len(time_list) > 0:
         time_start = time_list[0]
         time_normalized = [(t - time_start) for t in time_list]
 
-        # times are in milliseconds, convert to seconds
         if len(time_normalized) > 1 and time_normalized[-1] > 1000:
             time_normalized = [t / 1000.0 for t in time_normalized]
-    else:
-        time_normalized = time_list
+        return time_normalized
+    return time_list
+
+def plot_trial_basics(fig, filename):
+    """For a given trial, plot the encoder counts, velocities, steering angles"""
+    time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
+
+    time_normalized = normalize_time(time_list)
 
     # determine time range
     if hasattr(parameters, 'trial_time') and parameters.trial_time:
@@ -99,27 +127,57 @@ def plot_trial_basics(fig, filename):
     fig.tight_layout()
 
 
-def run_my_model_on_trial(fig, filename, plot_color='ko'):
+def run_my_model_on_trial(fig, filename, plot_color='c-'):
     """Plot a trajectory using the motion model, input data from a single trial."""
+    if parameters.DEBUG_PRINTS:
+        print(f"Loading file: {filename}")
     time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
+    if parameters.DEBUG_PRINTS:
+        print(f"Data loaded - {len(time_list)} time steps")
+        print(f"Time range: {time_list[0]} to {time_list[-1]}")
+        print(f"Encoder range: {encoder_count_list[0]} to {encoder_count_list[-1]}")
+        print(f"Encoder samples (first 10): {encoder_count_list[:10]}")
+        print(f"Encoder samples (last 10): {encoder_count_list[-10:]}")
+        print(f"Velocity samples (first 10): {velocity_list[:10]}")
+        print(f"Steering samples (first 10): {steering_angle_list[:10]}")
 
-    motion_model = motion_models.AckermannMM([0,0,0], 0)
-    x_list, y_list, theta_list = motion_model.traj_propagation(time_list,
+    time_normalized = normalize_time(time_list)
+    if parameters.DEBUG_PRINTS:
+        print(f"Time normalized: {time_normalized[0]:.3f} to {time_normalized[-1]:.3f} seconds")
+        print(f"First 5 time steps: {time_normalized[:5]}")
+
+    motion_model = motion_models.AckermannMM([0, 0, 0])
+    if parameters.DEBUG_PRINTS:
+        print(f"Motion model initialized at [0, 0, 0]")
+    x_list, y_list, theta_list = motion_model.traj_propagation(time_normalized,
                                                                encoder_count_list,
                                                                steering_angle_list)
+    if parameters.DEBUG_PRINTS:
+        print(f"Trajectory computed - {len(x_list)} points")
+        print(f"X range: {min(x_list):.4f} to {max(x_list):.4f}")
+        print(f"Y range: {min(y_list):.4f} to {max(y_list):.4f}")
+        print(f"First 5 positions: X={x_list[:5]}, Y={y_list[:5]}")
+        print(f"Last 5 positions: X={x_list[-5:]}, Y={y_list[-5:]}")
 
     fig.patch.set_facecolor('black')
     fig.clf()
 
     ax = fig.add_subplot(1, 1, 1)
-    ax.plot(x_list, y_list, plot_color)
+    ax.plot(x_list, y_list, plot_color, linewidth=2)
     ax.set_title('Motion Model Predicted XY Traj (m)', color='white')
     ax.set_xlabel('X (m)', color='white')
     ax.set_ylabel('Y (m)', color='white')
     ax.set_facecolor('black')
     ax.tick_params(colors='white')
     ax.grid(True, color='gray', alpha=0.3)
-    ax.axis([-0.5, 1.5, -1, 1])
+
+    # set axis limits based on data
+    if len(x_list) > 0 and len(y_list) > 0:
+        x_margin = (max(x_list) - min(x_list)) * 0.1 if max(x_list) != min(x_list) else 0.5
+        y_margin = (max(y_list) - min(y_list)) * 0.1 if max(y_list) != min(y_list) else 0.5
+        ax.set_xlim(min(x_list) - x_margin, max(x_list) + x_margin)
+        ax.set_ylim(min(y_list) - y_margin, max(y_list) + y_margin)
+    ax.set_aspect('equal', adjustable='box')
 
     fig.tight_layout()
 

@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Local libraries
-from robot_python_code import motion_models, robot
+from robot_python_code import motion_models, robot, parameters
 
 def get_file_data(filename):
     """ Open a file and return data in a form ready to plot"""
@@ -39,35 +39,62 @@ def plot_trial_basics(fig, filename):
     """For a given trial, plot the encoder counts, velocities, steering angles"""
     time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(filename)
 
+    # some additional time logic, start time at 0
+    if len(time_list) > 0:
+        time_start = time_list[0]
+        time_normalized = [(t - time_start) for t in time_list]
+
+        # times are in milliseconds, convert to seconds
+        if len(time_normalized) > 1 and time_normalized[-1] > 1000:
+            time_normalized = [t / 1000.0 for t in time_normalized]
+    else:
+        time_normalized = time_list
+
+    # determine time range
+    if hasattr(parameters, 'trial_time') and parameters.trial_time:
+        max_time = math.ceil(parameters.trial_time / (1000.0) * 1.5)
+    elif len(time_normalized) > 0:
+        min_len = min(len(time_normalized), len(encoder_count_list), len(velocity_list), len(steering_angle_list))
+        time_normalized = time_normalized[:min_len]
+        encoder_count_list = encoder_count_list[:min_len]
+        velocity_list = velocity_list[:min_len]
+        steering_angle_list = steering_angle_list[:min_len]
+        max_time = time_normalized[-1]
+    else:
+        max_time = 10
+
     fig.patch.set_facecolor('black')
     fig.clf()
 
     ax1 = fig.add_subplot(3, 1, 1)
-    ax1.plot(time_list, encoder_count_list)
+    ax1.plot(time_normalized, encoder_count_list)
     ax1.set_title('Encoder Values', color='white')
-    ax1.set_xlabel('Time', color='white')
+    ax1.set_xlabel('Time (s)', color='white')
     ax1.set_ylabel('Encoder Counts', color='white')
     ax1.set_facecolor('black')
     ax1.tick_params(colors='white')
     ax1.grid(True, color='gray', alpha=0.3)
+    ax1.set_xlim(0, max_time)
 
     ax2 = fig.add_subplot(3, 1, 2)
-    ax2.plot(time_list, velocity_list)
+    ax2.plot(time_normalized, velocity_list)
     ax2.set_title('Speed', color='white')
-    ax2.set_xlabel('Time', color='white')
+    ax2.set_xlabel('Time (s)', color='white')
     ax2.set_ylabel('Speed', color='white')
     ax2.set_facecolor('black')
     ax2.tick_params(colors='white')
     ax2.grid(True, color='gray', alpha=0.3)
+    ax2.set_xlim(0, max_time)
 
     ax3 = fig.add_subplot(3, 1, 3)
-    ax3.plot(time_list, steering_angle_list)
+    ax3.plot(time_normalized, steering_angle_list)
     ax3.set_title('Steering', color='white')
-    ax3.set_xlabel('Time', color='white')
+    ax3.set_xlabel('Time (s)', color='white')
     ax3.set_ylabel('Steering', color='white')
     ax3.set_facecolor('black')
     ax3.tick_params(colors='white')
     ax3.grid(True, color='gray', alpha=0.3)
+    ax3.set_xlim(0, max_time)
 
     fig.tight_layout()
 

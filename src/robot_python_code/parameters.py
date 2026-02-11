@@ -5,8 +5,8 @@ from pathlib import Path
 import math
 
 # UDP parameters
-localIP = "10.42.0.1" # Put your laptop computer's IP here
-arduinoIP = "10.42.0.114" # Put your arduino's IP here
+localIP = "192.168.0.200" # Put your laptop computer's IP here
+arduinoIP = "192.168.0.198" # Put your arduino's IP here
 localPort = 4010
 arduinoPort = 4010
 bufferSize = 1024
@@ -28,9 +28,9 @@ data_name_list = ['time', 'control_signal', 'robot_sensor_signal', 'camera_senso
 # Experiment trial parameters
 trial_type = "steering" # "steering" or "distance"
 extra_trial_log_time = 2000 # milliseconds
-trial_max_speed = 40
-trial_time = 4000 # milliseconds
-trial_input = -15 # delta for steering, u_x for distance
+trial_max_speed = 60
+trial_time = 15000 # milliseconds
+trial_input = -20 # delta for steering, u_x for distance
 
 # MM parameters
 counts_to_m = 0.000295

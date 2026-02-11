@@ -52,7 +52,7 @@ def update_video(video_image):
 
 def get_time_in_ms():
     """Get the current time in milliseconds."""
-    return int(time()*1000)
+    return int(time.time()*1000)
 
 # Create the gui page
 @ui.page('/')
@@ -205,7 +205,8 @@ def main_page():
                 slider_speed.value = parameters.trial_max_speed
                 print("Trial input speed exceeds max speed, setting to max speed.")
 
-        print("Start time:", robot.trial_start_time)
+        # print("Start time:", robot.trial_start_time)
+        print("Start time:", robot_instance.trial_start_time)
 
     def build_trial_plots(selected_file):
         """ Build the trial plot for the selected file"""

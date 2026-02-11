@@ -17,9 +17,9 @@ def create_udp_communication(arduinoIP, localIP, arduinoPort, localPort, bufferS
         udp = UDPCommunication(arduinoIP, localIP, arduinoPort, localPort, bufferSize)
         print("Success in creating udp communication")
         return udp, True
-    except:
-        print("Failed to create udp communication!")
-        return _, False
+    except Exception as exc:
+        print(f"Failed to create udp communication: {exc}")
+        return None, False
 
 class UDPCommunication:
     """Class to hold the UPD over wifi connection setup"""
@@ -282,6 +282,10 @@ class Robot:
         self.robot_sensor_signal = RobotSensorSignal([0, 0, 0])
         self.camera_sensor_signal = [0,0,0,0,0,0]
         print("New robot!")
+        
+    def create_udp_communication(self, arduinoIP, localIP, arduinoPort, localPort, bufferSize):
+        """Instance wrapper so GUI can request UDP setup from the robot object."""
+        return create_udp_communication(arduinoIP, localIP, arduinoPort, localPort, bufferSize)
 
     def setup_udp_connection(self, udp_communication):
         """Create udp senders and receiver instances with the udp communication"""

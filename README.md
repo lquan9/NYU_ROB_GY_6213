@@ -23,6 +23,31 @@ Primarily used to solve labs for the NYU course ROB-GY 6213: Robot Localization 
 
 # Quick Start
 ## Pre-requisites
+1. [Git LFS](https://git-lfs.github.com/)
+2. [Python Virtual Env](https://docs.python.org/3/tutorial/venv.html)
+
+<details>
+<summary><strong>Click for instructions on installing prerequisites</strong></summary>
+
+---
+**1. Git-LFS**
+
+We rely on GIT Large File Storage for handling binary files that are required for building and using Phoenix. E.g., pre-compiled system dependencies that aren't available from public servers and trained neural network weights.
+
+```bash
+#To install Git-LFS
+sudo apt install git-lfs
+git lfs install
+```
+
+**2. Python3 Virtual Environment
+```bash
+sudo apt update
+sudo apt install python3.12-venv
+```
+---
+</details>
+
 ### Setup Python workspace
 ```bash
 python3 -m venv rob6213_env

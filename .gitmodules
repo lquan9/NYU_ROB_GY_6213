@@ -1,0 +1,6 @@
+[submodule "docs/latex"]
+	path = docs/latex
+	url = https://git@git.overleaf.com/697d1940d2438e221e1b92fc
+[submodule "external/nyu_rob_gy_6213"]
+	path = external/nyu_rob_gy_6213
+	url = git@github.com:cmclarkk/NYU_ROB_GY_6213.git

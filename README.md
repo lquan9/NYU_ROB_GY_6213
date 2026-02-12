@@ -3,7 +3,7 @@ This repository was originally forked from: https://github.com/cmclarkk/NYU_ROB_
 Primarily used to solve labs for the NYU course ROB-GY 6213: Robot Localization and Navigation.
 
 [![Arduino Build](https://github.com/lquan9/NYU_ROB_GY_6213/actions/workflows/arduino_ci.yml/badge.svg)](https://github.com/lquan9/NYU_ROB_GY_6213/actions)
-![pylint](https://img.shields.io/badge/PyLint-6.21-orange?logo=python&logoColor=white)
+![Pylint](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/lquan9/d09cfb9f249c9995b9fa1943d90a1d71/raw/pylint.json)
 [![Python Version](https://img.shields.io/badge/python-%203.12-blue)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -15,13 +15,39 @@ Primarily used to solve labs for the NYU course ROB-GY 6213: Robot Localization 
 > <sup>
 > Authors are with New York University - Tandon School of Engineering
 > <br> 6 MetroTech Center, Brooklyn, NY. 
-> <br> All have contributed equally to this work.
 > </sup>
 > 
 > [Code](https://github.com/lquan9/NYU_ROB_GY_6213) | [Docs](./docs)
 
+<!--![BTF Robot](docs/assets/a_robot_image.jpg)-->
+
 # Quick Start
 ## Pre-requisites
+1. [Git LFS](https://git-lfs.github.com/)
+2. [Python Virtual Env](https://docs.python.org/3/tutorial/venv.html)
+
+<details>
+<summary><strong>Click for instructions on installing prerequisites</strong></summary>
+
+---
+**1. Git-LFS**
+
+We rely on GIT Large File Storage for handling binary files that are required for building and using Phoenix. E.g., pre-compiled system dependencies that aren't available from public servers and trained neural network weights.
+
+```bash
+#To install Git-LFS
+sudo apt install git-lfs
+git lfs install
+```
+
+**2. Python3 Virtual Environment
+```bash
+sudo apt update
+sudo apt install python3.12-venv
+```
+---
+</details>
+
 ### Setup Python workspace
 ```bash
 python3 -m venv rob6213_env
@@ -68,7 +94,7 @@ gui
 - Implementation: motion model + sampling
 - Documentation: report writing & video recording
 
-[Lab 02 details](#)
+[Lab 02 details](docs/lab-02.md)
 
 ---
 

@@ -4,9 +4,10 @@
 #include <WiFiUdp.h>
 #define SendDeltaTimeInMs 100      // Number ms between messages sent to laptop
 #define ReceiveDeltaTimeInMs 10    // Number ms between checking for control signals sent from laptop
+#define NoSignalDeltaTimeInMs 2000 // Number ms between message receives from laptop before stopping robot
 #include "wifi_credentials.h"
-#include "parameters.h"
 
+const int array_length = 128;
 unsigned int localPort = 4010;     // local port to listen on - no need to change
 unsigned int remotePort = 4010;    // local port to listen on - no need to change
 int status = WL_IDLE_STATUS;
@@ -161,8 +162,8 @@ void forward(int speed)
   digitalWrite(RightMotorDirPin2,HIGH);
   digitalWrite(LeftMotorDirPin1,HIGH);
   digitalWrite(LeftMotorDirPin2,LOW);
-  analogWrite(LeftSpeedPin, speed * 1.5); 
-  analogWrite(RightSpeedPin, speed);
+  analogWrite(LeftSpeedPin, speed * 1.25 ); 
+  analogWrite(RightSpeedPin, speed * 0.95);
 }
 
 // Receive control signal messages from laptop, but only have delta time has passed, e.g. 10ms
@@ -259,8 +260,8 @@ void send_sensor_signal(SensorSignal sensor_signal)
     msg = msg + String(current_num_lidar_rays);
     msg = msg + current_lidar_scan_data;
     reset_lidar_message();
-    Serial.print("Sending msg: ");
-    Serial.println(msg);
+    //Serial.print("Sending msg: ");
+    //Serial.println(msg);
 
     Udp.beginPacket(remoteIP, remotePort);
     int   array_length  = msg.length()+1;

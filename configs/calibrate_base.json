@@ -1,0 +1,204 @@
+{
+  "data_directory": "../data/data_straight/btf",
+  "encoder_trials": [
+    {
+      "log_file": "robot_data_40_0_07_02_26_00_13_40.pkl",
+      "distance_m": 1.753
+    },
+    {
+      "log_file": "robot_data_40_0_07_02_26_00_15_20.pkl",
+      "distance_m": 3.581
+    },
+    {
+      "log_file": "robot_data_40_0_07_02_26_00_18_41.pkl",
+      "distance_m": 5.423
+    },
+    {
+      "log_file": "robot_data_40_0_07_02_26_00_21_20.pkl",
+      "distance_m": 7.061
+    },
+    {
+      "log_file": "robot_data_50_0_07_02_26_00_25_23.pkl",
+      "distance_m": 2.489
+    },
+    {
+      "log_file": "robot_data_50_0_07_02_26_00_28_29.pkl",
+      "distance_m": 5.029
+    },
+    {
+      "log_file": "robot_data_50_0_07_02_26_00_30_41.pkl",
+      "distance_m": 7.557
+    },
+    {
+      "log_file": "robot_data_50_0_07_02_26_00_36_09.pkl",
+      "distance_m": 9.919
+    },
+    {
+      "log_file": "robot_data_60_0_07_02_26_00_38_48.pkl",
+      "distance_m": 3.048
+    },
+    {
+      "log_file": "robot_data_60_0_07_02_26_00_40_20.pkl",
+      "distance_m": 6.020
+    },
+    {
+      "log_file": "robot_data_60_0_07_02_26_00_43_03.pkl",
+      "distance_m": 9.017
+    },
+    {
+      "log_file": "robot_data_60_0_07_02_26_00_45_10.pkl",
+      "distance_m": 12.497
+    },
+    {
+      "log_file": "robot_data_75_0_07_02_26_01_00_43.pkl",
+      "distance_m": 6.883
+    },
+    {
+      "log_file": "robot_data_75_0_07_02_26_01_03_00.pkl",
+      "distance_m": 10.236
+    },
+    {
+      "log_file": "robot_data_75_0_07_02_26_01_05_06.pkl",
+      "distance_m": 10.236
+    },
+    {
+      "log_file": "robot_data_100_0_07_02_26_00_50_23.pkl",
+      "distance_m": 3.759
+    },
+    {
+      "log_file": "robot_data_100_0_07_02_26_00_57_44.pkl",
+      "distance_m": 7.315
+    }
+  ],
+  "steering_trials": [
+    {
+      "log_file": "",
+      "measured_yaw_deg": -28.2,
+      "average_steering_cmd": -20,
+      "average_speed": 40,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -19.0,
+      "average_steering_cmd": -15.0,
+      "average_speed": 40,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -2.1,
+      "average_steering_cmd": -10.0,
+      "average_speed": 40,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 3.4,
+      "average_steering_cmd": 10.0,
+      "average_speed": 40,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 9.3,
+      "average_steering_cmd": 15.0,
+      "average_speed": 40,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 20.4,
+      "average_steering_cmd": 20.0,
+      "average_speed": 40,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -74.7,
+      "average_steering_cmd": -20,
+      "average_speed": 60,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -42.0,
+      "average_steering_cmd": -15.0,
+      "average_speed": 60,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -15,
+      "average_steering_cmd": -10.0,
+      "average_speed": 60,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 4.5,
+      "average_steering_cmd": 10.0,
+      "average_speed": 60,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 17.6,
+      "average_steering_cmd": 15.0,
+      "average_speed": 60,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 38.6,
+      "average_steering_cmd": 20.0,
+      "average_speed": 60,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -90,
+      "average_steering_cmd": -20,
+      "average_speed": 75,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -42.5,
+      "average_steering_cmd": -15.0,
+      "average_speed": 75,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": -18,
+      "average_steering_cmd": -10.0,
+      "average_speed": 75,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 23.5,
+      "average_steering_cmd": 10.0,
+      "average_speed": 75,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 25.7,
+      "average_steering_cmd": 15.0,
+      "average_speed": 75,
+      "total_time": 15.0
+    },
+    {
+      "log_file": "",
+      "measured_yaw_deg": 40.9,
+      "average_steering_cmd": 20.0,
+      "average_speed": 75,
+      "total_time": 15.0
+    }
+  ],
+  "output": {
+    "results_file": "calibration_results.json"
+  }
+}

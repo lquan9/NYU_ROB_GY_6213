@@ -571,6 +571,15 @@ def main_page():
             selected_trial_plot = ui.pyplot(figsize=(8, 5)).classes('w-full')
             # aggregate_plot = ui.pyplot(figsize=(4, 4)).classes('w-full')
 
+            def save_trial_plot():
+                """Save trial plot"""
+                save_path = Path('docs/latex/plots/trial_plot_export.png')
+                save_path.parent.mkdir(parents=True, exist_ok=True)
+                selected_trial_plot.fig.savefig(str(save_path), dpi=150, bbox_inches='tight', facecolor='black')
+                ui.notify(f'Plot saved to {save_path}', type='positive')
+
+            ui.button('Save Plot', on_click=save_trial_plot, icon='save').props('color=secondary')
+
             if trial_files and trial_selector:
                 trial_selector.on_value_change(lambda event: build_trial_plots(event.value))
                 build_trial_plots(trial_files[0])
@@ -597,6 +606,15 @@ def main_page():
                 ax.set_xlim(0, 1)
                 ax.set_ylim(0, 1)
                 ax.axis('off')
+
+            def save_model_plot():
+                """Save model plot"""
+                save_path = Path('docs/latex/plots/model_plot_export.png')
+                save_path.parent.mkdir(parents=True, exist_ok=True)
+                model_plot.fig.savefig(str(save_path), dpi=150, bbox_inches='tight', facecolor='black')
+                ui.notify(f'Plot saved to {save_path}', type='positive')
+
+            ui.button('Save Plot', on_click=save_model_plot, icon='save').props('color=secondary')
 
     # Update slider values, plots, etc. and run robot control loop
     async def control_loop():

@@ -7,9 +7,12 @@ import pickle
 import time
 import cv2
 import cv2.aruco as aruco
+import numpy as np
+import matplotlib.pyplot as plt
+from time import strftime
 
 # Local libraries
-from . import parameters
+from . import parameters, extended_kalman_filter
 
 def create_udp_communication(arduinoIP, localIP, arduinoPort, localPort, bufferSize):
     """Function to try to connect to the robot via udp over wifi"""
@@ -86,6 +89,8 @@ class DataLogger:
         self.dictionary['control_signal'].append(control_signal)
         self.dictionary['robot_sensor_signal'].append(robot_sensor_signal)
         self.dictionary['camera_sensor_signal'].append(camera_sensor_signal)
+        self.dictionary['state_mean'].append(state_mean)
+        self.dictionary['state_covariance'].append(state_covariance)
 
         self.line_count += 1
         if self.line_count > parameters.max_num_lines_before_write:
@@ -187,6 +192,8 @@ class MsgSender:
         packed_msg = packed_msg + "\n"
         return packed_msg
 
+
+
 class RobotSensorSignal:
     """ A storage vessel for an instance of a robot signal"""
 
@@ -281,7 +288,7 @@ class Robot:
         self.data_logger = DataLogger(parameters.datapath, parameters.data_name_list)
         self.robot_sensor_signal = RobotSensorSignal([0, 0, 0])
         self.camera_sensor_signal = [0,0,0,0,0,0]
-        print("New robot!")
+        self.extended_kalman_filter = extended_kalman_filter.ExtendedKalmanFilter(x_0 = [0,0,0], Sigma_0 = parameters.I3 * 10e12, encoder_counts_0 = 0)
         
     def create_udp_communication(self, arduinoIP, localIP, arduinoPort, localPort, bufferSize):
         """Instance wrapper so GUI can request UDP setup from the robot object."""
@@ -299,12 +306,25 @@ class Robot:
         self.msg_receiver = None
         print("Eliminate UDP !!!")
 
+    def update_state_estimate(self):
+        u_t = np.array([self.robot_sensor_signal.encoder_counts, self.robot_sensor_signal.steering]) # robot_sensor_signal
+        z_t = np.array([self.camera_sensor_signal[0],self.camera_sensor_signal[1],self.camera_sensor_signal[5]]) # camera_sensor_signal
+        delta_t = 0.1
+        self.extended_kalman_filter.update(u_t, z_t, delta_t)
+
     # One iteration of the control loop to be called repeatedly
     def control_loop(self, cmd_speed = 0, cmd_steering_angle = 0, logging_switch_on = False):
         """ One iteration of the robot control loop to be called repeatedly"""
-        # Receive msg
+        # Get camera signal
+        self.camera_sensor_signal = self.camera_sensor.get_signal(self.camera_sensor_signal)
+        print("Camera signal: ", int(100*self.camera_sensor_signal[0]), int(100*self.camera_sensor_signal[1]), int(100*self.camera_sensor_signal[2]))
+                
+	# Receive msg
         if self.msg_sender is not None:
             self.robot_sensor_signal = self.msg_receiver.receive_robot_sensor_signal(self.robot_sensor_signal)
+        
+        # Update the state estimates
+        self.update_state_estimate()
 
         # Update control signals
         control_signal = [cmd_speed, cmd_steering_angle]
@@ -314,4 +334,5 @@ class Robot:
             self.msg_sender.send_control_signal(control_signal)
 
         # Log the data
-        self.data_logger.log(logging_switch_on, time.perf_counter(), control_signal, self.robot_sensor_signal, self.camera_sensor_signal)
+	self.data_logger.log(logging_switch_on, time.perf_counter(), control_signal, self.robot_sensor_signal, self.camera_sensor_signal, self.extended_kalman_filter.state_mean, self.extended_kalman_filter.state_covariance)
+

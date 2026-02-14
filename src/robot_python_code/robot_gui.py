@@ -79,8 +79,8 @@ def main_page():
     dark.value = True
 
     # Set up the video stream, not needed for lab 1
-    if STREAM_VIDEO:
-        video_capture = cv2.VideoCapture(1)
+    if stream_video:
+        video_capture = cv2.VideoCapture(parameters.camera_id)
 
     # Enable frame grabs from the video stream.
     @app.get('/video/frame')
@@ -166,28 +166,56 @@ def main_page():
         if not steering_switch.value:
             slider_steering.value = 0
 
-    # def show_lidar_plot():
-    #     """ Visualize the lidar scans"""
-    #     with main_plot:
-    #         fig = main_plot.fig
-    #         fig.patch.set_facecolor('black')
-    #         plt.clf()
-    #         plt.style.use('dark_background')
-    #         plt.tick_params(axis='x', colors='lightgray')
-    #         plt.tick_params(axis='y', colors='lightgray')
+    def show_lidar_plot():
+        """ Visualize the lidar scans"""
+        with main_plot:
+            fig = main_plot.fig
+            fig.patch.set_facecolor('black')
+            plt.clf()
+            plt.style.use('dark_background')
+            plt.tick_params(axis='x', colors='lightgray')
+            plt.tick_params(axis='y', colors='lightgray')
 
-    #         for i in range(num_angles):
-    #             distance = lidar_distance_list[i]
-    #             cos_ang = lidar_cos_angle_list[i]
-    #             sin_ang = lidar_sin_angle_list[i]
-    #             x = [distance * cos_ang, max_lidar_range * cos_ang]
-    #             y = [distance * sin_ang, max_lidar_range * sin_ang]
-    #             plt.plot(x, y, 'r')
-    #         plt.grid(True)
-    #         #plt.axis('equal')
-    #         plt.xlim(-2,2)
-    #         plt.ylim(-2,2)
+            for i in range(num_angles):
+                distance = lidar_distance_list[i]
+                cos_ang = lidar_cos_angle_list[i]
+                sin_ang = lidar_sin_angle_list[i]
+                x = [distance * cos_ang, max_lidar_range * cos_ang]
+                y = [distance * sin_ang, max_lidar_range * sin_ang]
+                plt.plot(x, y, 'r')
+            plt.grid(True)
+            #plt.axis('equal')
+            plt.xlim(-2,2)
+            plt.ylim(-2,2)
 
+    # Visualize the lidar scans
+    def show_localization_plot():
+        with main_plot:
+            fig = main_plot.fig
+            fig.patch.set_facecolor('black')
+            plt.clf()
+            plt.style.use('dark_background')
+            plt.tick_params(axis='x', colors='lightgray')
+            plt.tick_params(axis='y', colors='lightgray')
+            
+            sigma = 3
+            covar_matrix = parameters.covariance_plot_scale * robot.extended_kalman_filter.state_covariance[0:2,0:2]#np.array([[sigma, -sigma*0.9],[ -sigma*0.9, sigma]])
+            x_est = robot.extended_kalman_filter.state_mean[0]
+            y_est = robot.extended_kalman_filter.state_mean[1]
+            lambda_, v = np.linalg.eig(covar_matrix)
+            lambda_ = np.sqrt(lambda_)
+            ell = Ellipse(xy=(x_est, y_est), alpha=0.5, facecolor='red',width=lambda_[0], height=lambda_[1], angle=np.rad2deg(np.arctan2(*v[:,0][::-1])))
+            ax = fig.gca()
+            ax.add_artist(ell)
+
+            plt.plot(x_est, y_est, 'ro')
+
+            plt.grid(True)
+            plot_range = 1
+            plt.xlim(-plot_range, plot_range)
+            plt.ylim(-plot_range, plot_range)
+
+    # Run an experiment trial from a button push
     def run_trial():
         robot_instance.trial_start_time = get_time_in_ms()
         robot_instance.running_trial = True
@@ -624,6 +652,7 @@ def main_page():
         encoder_count_label.set_text(robot_instance.robot_sensor_signal.encoder_counts)
         # update_lidar_data()
         # show_lidar_plot()
+        show_localization_plot()
         update_video(video_image)
 
     ui.timer(0.1, control_loop)

@@ -40,7 +40,7 @@ sudo apt install git-lfs
 git lfs install
 ```
 
-**2. Python3 Virtual Environment
+**2. Python3 Virtual Environment**
 ```bash
 sudo apt update
 sudo apt install python3.12-venv

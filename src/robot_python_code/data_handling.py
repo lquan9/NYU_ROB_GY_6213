@@ -63,7 +63,7 @@ def get_trial_files(trial_data_dir):
 
 # Open a file and return data in a form ready to plot
 def get_file_data_for_kf(filename):
-    data_loader = robot_python_code.DataLoader(filename)
+    data_loader = robot.DataLoader(filename)
     data_dict = data_loader.load()
 
     # The dictionary should have keys ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']

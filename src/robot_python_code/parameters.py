@@ -3,6 +3,7 @@
 from pathlib import Path
 # External libraries
 import math
+import numpy as np
 
 # UDP parameters
 localIP = "192.168.0.200" # Put your laptop computer's IP here
@@ -28,7 +29,7 @@ num_robot_control_signals = 2 # speed, steering
 DEBUG_PRINTS = False
 max_num_lines_before_write = 50
 datapath = Path(__file__).resolve().parent.parent.parent / 'data' / 'data_straight' / 'btf'
-data_name_list = ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']
+data_name_list = ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal', 'state_mean', 'state_covariance']
 
 # Experiment trial parameters
 trial_type = "steering" # "steering" or "distance"
@@ -39,8 +40,8 @@ trial_input = 0 # delta for steering, u_x for distance
 
 # MM parameters
 counts_to_m = 3518
-distance_variance_a = 0.0001
-distance_variance_b = 0.01
+distance_variance_a = 0.0001              #0.0001
+distance_variance_b = 0.01            #0.01
 steering_to_w = 0.0024
 steering_variance_a = 0.0001
 steering_variance_b = -0.000635

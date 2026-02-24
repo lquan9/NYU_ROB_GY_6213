@@ -73,9 +73,11 @@ class DataLogger:
         self.dictionary = {}
         for name in self.data_name_list:
             self.dictionary[name] = []
+        self.dictionary['state_mean'] = []
+        self.dictionary['state_covariance'] = []
 
 
-    def log(self, logging_switch_on, time, control_signal, robot_sensor_signal, camera_sensor_signal):
+    def log(self, logging_switch_on, time, control_signal, robot_sensor_signal, camera_sensor_signal, state_mean=None, state_covariance=None):
         """ Log one time step of data"""
         if not logging_switch_on:
             if self.currently_logging:
@@ -319,7 +321,7 @@ class Robot:
         self.camera_sensor_signal = self.camera_sensor.get_signal(self.camera_sensor_signal)
         print("Camera signal: ", int(100*self.camera_sensor_signal[0]), int(100*self.camera_sensor_signal[1]), int(100*self.camera_sensor_signal[2]))
                 
-	# Receive msg
+	    # Receive msg
         if self.msg_sender is not None:
             self.robot_sensor_signal = self.msg_receiver.receive_robot_sensor_signal(self.robot_sensor_signal)
         
@@ -334,5 +336,6 @@ class Robot:
             self.msg_sender.send_control_signal(control_signal)
 
         # Log the data
-	self.data_logger.log(logging_switch_on, time.perf_counter(), control_signal, self.robot_sensor_signal, self.camera_sensor_signal, self.extended_kalman_filter.state_mean, self.extended_kalman_filter.state_covariance)
+        # if logging_switch_on:
+        self.data_logger.log(time.perf_counter(), control_signal, self.robot_sensor_signal, self.camera_sensor_signal, self.extended_kalman_filter.state_mean, self.extended_kalman_filter.state_covariance)
 

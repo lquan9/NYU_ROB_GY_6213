@@ -34,9 +34,9 @@ data_name_list = ['time', 'control_signal', 'robot_sensor_signal', 'camera_senso
 # Experiment trial parameters
 trial_type = "steering" # "steering" or "distance"
 extra_trial_log_time = 2000 # milliseconds
-trial_max_speed = 60
+trial_max_speed = 40
 trial_time = 5000 # milliseconds
-trial_input = -5 # delta for steering, u_x for distance
+trial_input = 2 # delta for steering, u_x for distance
 
 # MM parameters
 counts_to_m = 3518

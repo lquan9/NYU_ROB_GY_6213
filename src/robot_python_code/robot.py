@@ -144,7 +144,7 @@ class CameraSensor:
         if ids is not None:
             # Estimate pose for each detected marker
             for i in range(len(ids)):
-                rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners[i], parameters.marker_length, camera_matrix, dist_coeffs)
+                rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners[i], parameters.marker_length, parameters.camera_matrix, parameters.dist_coeffs)
                 pose_estimate = [tvec[0][0][0], tvec[0][0][1], tvec[0][0][2], rvec[0][0][0], rvec[0][0][1], rvec[0][0][2]]
             return True, pose_estimate
 

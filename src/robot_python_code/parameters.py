@@ -6,7 +6,7 @@ import math
 import numpy as np
 
 # UDP parameters
-localIP = "192.168.0.200" # Put your laptop computer's IP here
+localIP = "192.168.0.196" # Put your laptop computer's IP here
 arduinoIP = "192.168.0.198" # Put your arduino's IP here
 localPort = 4010
 arduinoPort = 4010
@@ -14,8 +14,9 @@ bufferSize = 1024
 
 # Camera parameters
 camera_id = 0
-marker_length = 0.071
-camera_matrix = np.array([[1.41089024e+03, 0.00000000e+00 ,5.34757040e+02],
+marker_length = 0.10 # we are using 100mm markersize 6x6 ID is zero
+# need to update the camera matrix and dist_coeffs acc to intel realsense 
+camera_matrix = np.array([[1.41089024e+03, 0.00000000e+00 ,5.34757040e+02],      
  [0.00000000e+00 ,1.40977771e+03, 4.63300611e+02],
  [0.00000000e+00 ,0.00000000e+00 ,1.00000000e+00]], dtype=np.float32)
 dist_coeffs = np.array([-0.32511173, -0.09273864 ,-0.00295959 , 0.00111094 , 0.2446519 ], dtype=np.float32)

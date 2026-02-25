@@ -790,7 +790,7 @@ def main_page():
                 try:
                     from robot_python_code import extended_kalman_filter as ekf_module
                     ekf_data = data_handling.get_file_data_for_kf(offline_ekf_selector.value)
-                    x_0 = [ekf_data[0][3][0] + 0.5, ekf_data[0][3][1], ekf_data[0][3][5]]
+                    x_0 = [ekf_data[0][3][0], ekf_data[0][3][1], ekf_data[0][3][5]]
                     Sigma_0 = np.diag([0.25, 0.25, 0.1])
                     encoder_counts_0 = ekf_data[0][2].encoder_counts
                     offline_filter = ekf_module.ExtendedKalmanFilter(x_0, Sigma_0, encoder_counts_0)

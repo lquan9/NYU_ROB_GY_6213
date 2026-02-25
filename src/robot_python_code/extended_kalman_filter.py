@@ -113,7 +113,7 @@ class ExtendedKalmanFilter:
         # Angular velocity from Ackermann geometry
         steer_rad = math.radians(steering_angle)
         if abs(steer_rad) > 1e-6 and parameters.wheelbase > 1e-6:
-            omega = v * math.tan(steer_rad) / parameters.wheelbase
+            omega = v * math.tan(-steer_rad) / parameters.wheelbase
         else:
             omega = 0.0
 
@@ -173,8 +173,8 @@ class ExtendedKalmanFilter:
 
     # This function returns the Q_t matrix which contains measurement covariance terms.
     def get_Q(self):
-        var_x     = 0.01    # meters² - replace after camera experiment
-        var_y     = 0.01    # meters² - replace after camera experiment
+        var_x     = 0.01    # meters² -  after camera experiment
+        var_y     = 0.01    # meters² -  after camera experiment
         var_theta = 0.05   # rad²/s² (0.12 deg²/s² converted)
         return np.array([
             [var_x,  0,      0        ],
@@ -219,12 +219,12 @@ def offline_efk(use_correction=True):
     # Get data to filter
     
     # filename = './data/data_straight/btf/robot_data_40_15_10_02_26_23_13_58.pkl'
-    filename = '/home/jeddak1729/Documents/rlan/labs/btf-robot/data/data_straight/btf/robot_data_60_10_10_02_26_23_37_05.pkl'
+    filename = '/Users/jotheeshkummathi/Desktop/NYUSA/Semester 4/RLAN/labs/btf-robot/data/data_straight/btf/robot_data_60_-5_24_02_26_18_44_28.pkl'
 
     ekf_data = data_handling.get_file_data_for_kf(filename)
 
     # Instantiate PF with no initial guess
-    x_0 = [ekf_data[0][3][0]+.5, ekf_data[0][3][1], ekf_data[0][3][5]]
+    x_0 = [ekf_data[0][3][0], ekf_data[0][3][1], ekf_data[0][3][5]]
     Sigma_0 = np.diag([0.25, 0.25, 0.1]) # Sigma_0 = parameters.I3
     encoder_counts_0 = ekf_data[0][2].encoder_counts
     extended_kalman_filter = ExtendedKalmanFilter(x_0, Sigma_0, encoder_counts_0)

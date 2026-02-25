@@ -36,7 +36,7 @@ trial_type = "steering" # "steering" or "distance"
 extra_trial_log_time = 2000 # milliseconds
 trial_max_speed = 60
 trial_time = 5000 # milliseconds
-trial_input = 0 # delta for steering, u_x for distance
+trial_input = -5 # delta for steering, u_x for distance
 
 # MM parameters
 counts_to_m = 3518

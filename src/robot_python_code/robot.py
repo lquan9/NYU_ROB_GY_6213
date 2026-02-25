@@ -69,7 +69,7 @@ class DataLogger:
 
     def reset_logfile(self, control_signal):
         """Open the log file"""
-        self.filename = self.datapath / ("robot_data_"+str(control_signal[0])+"_"+str(control_signal[1]) + strftime("_%d_%m_%y_%H_%M_%S.pkl"))
+        self.filename = self.datapath / ("robot_data_" + str(control_signal[0])+"_"+str(control_signal[1]) + strftime("_%d_%m_%y_%H_%M_%S.pkl"))
         self.dictionary = {}
         for name in self.data_name_list:
             self.dictionary[name] = []
@@ -337,5 +337,5 @@ class Robot:
 
         # Log the data
         # if logging_switch_on:
-        self.data_logger.log(time.perf_counter(), control_signal, self.robot_sensor_signal, self.camera_sensor_signal, self.extended_kalman_filter.state_mean, self.extended_kalman_filter.state_covariance)
+        self.data_logger.log(logging_switch_on,time.perf_counter(), control_signal, self.robot_sensor_signal, self.camera_sensor_signal, self.extended_kalman_filter.state_mean, self.extended_kalman_filter.state_covariance)
 

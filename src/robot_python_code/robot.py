@@ -100,19 +100,24 @@ class DataLoader:
 
 
 class CameraSensor:
-    def __init__(self, camera_id):
-        self.camera_id = camera_id
+    def __init__(self, cam_cfg):
+        """Initialize with a camera config dict from parameters (camera_a or camera_b)."""
+        self.cam_cfg = cam_cfg
+        self.name = cam_cfg.get('name', 'Camera')
         # Resolve camera source: network URL takes priority over local index
-        source = parameters.camera_source if parameters.camera_source is not None else camera_id
+        source = cam_cfg['source'] if cam_cfg['source'] is not None else cam_cfg['camera_id']
         self.source = source
         self.cap = cv2.VideoCapture(source)
         if isinstance(source, str):
-            print(f"[CameraSensor] Using network camera: {source}")
+            print(f"[{self.name}] Using network camera: {source}")
         else:
-            print(f"[CameraSensor] Using local camera device: {source}")
+            print(f"[{self.name}] Using local camera device: {source}")
         self.aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
-        self.parameters = aruco.DetectorParameters()
-        self.detector = aruco.ArucoDetector(self.aruco_dict, self.parameters)
+        self.aruco_params = aruco.DetectorParameters()
+        self.detector = aruco.ArucoDetector(self.aruco_dict, self.aruco_params)
+        # Per-camera intrinsics
+        self.camera_matrix = cam_cfg['camera_matrix']
+        self.dist_coeffs = cam_cfg['dist_coeffs']
 
     def get_signal(self, last_camera_signal):
         camera_signal = last_camera_signal
@@ -122,23 +127,53 @@ class CameraSensor:
         return camera_signal, ret  # ret = True if marker was detected this frame
 
     def get_pose_estimate(self):
+        """Detect markers and compute robot pose in world frame.
+
+        If both world-origin tag and robot tag are visible, returns
+        the robot's pose relative to the world tag via relative_pose().
+        If only the robot tag is visible, returns raw camera-frame values
+        (backward compatible, but less useful without world reference).
+        """
         ret, frame = self.cap.read()
         if not ret:
             return False, []
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        corners, ids, rejectedImgPoints = self.detector.detectMarkers(gray)
-        if ids is not None:
-            for i in range(len(ids)):
-                rvec, tvec, _ = aruco.estimatePoseSingleMarkers(corners[i], parameters.marker_length, parameters.camera_matrix, parameters.dist_coeffs)
-                pose_estimate = [tvec[0][0][0], tvec[0][0][1], tvec[0][0][2], rvec[0][0][0], rvec[0][0][1], rvec[0][0][2]]
-            return True, pose_estimate
+        corners, ids, _ = self.detector.detectMarkers(gray)
+        if ids is None:
+            return False, []
 
-        return False, []
+        # Collect per-ID poses
+        world_rvec, world_tvec = None, None
+        robot_rvec, robot_tvec = None, None
 
-    def close(self):
-        self.cap.release()
-        cv2.destroyAllWindows()
+        for i, marker_id in enumerate(ids.flatten()):
+            if marker_id == parameters.world_marker_id:
+                rvec, tvec, _ = aruco.estimatePoseSingleMarkers(
+                    corners[i], parameters.world_marker_length,
+                    self.camera_matrix, self.dist_coeffs)
+                world_rvec = rvec[0][0]
+                world_tvec = tvec[0][0]
+            elif marker_id == parameters.robot_marker_id:
+                rvec, tvec, _ = aruco.estimatePoseSingleMarkers(
+                    corners[i], parameters.robot_marker_length,
+                    self.camera_matrix, self.dist_coeffs)
+                robot_rvec = rvec[0][0]
+                robot_tvec = tvec[0][0]
+
+        if robot_rvec is None:
+            return False, []
+
+        # If we have both markers, compute relative pose (robot in world frame)
+        if world_rvec is not None:
+            world_pose = parameters.relative_pose(
+                world_rvec, world_tvec, robot_rvec, robot_tvec)
+            return True, world_pose  # [x, y, theta] in world frame
+
+        # Fallback: only robot tag visible, return raw camera-frame values
+        pose_raw = [robot_tvec[0], robot_tvec[1], robot_tvec[2],
+                    robot_rvec[0], robot_rvec[1], robot_rvec[2]]
+        return True, pose_raw
 
 
 class MsgSender:
@@ -247,12 +282,27 @@ class Robot:
         self.trial_start_time = 0
         self.msg_sender = None
         self.msg_receiver = None
-        self.camera_sensor = CameraSensor(parameters.camera_id)
+
+        # Dual-camera setup
+        self.camera_a = CameraSensor(parameters.camera_a)
+        self.camera_b_enabled = (parameters.camera_b['source'] is not None)
+        self.camera_b = CameraSensor(parameters.camera_b) if self.camera_b_enabled else None
+
         self.data_logger = DataLogger(parameters.datapath, parameters.data_name_list)
         self.robot_sensor_signal = RobotSensorSignal([0, 0, 0])
-        self.camera_sensor_signal = [0, 0, 0, 0, 0, 0]  # raw camera frame values
-        self.camera_pose = [0, 0, 0]                     # world frame [x, y, theta]
-        self.camera_is_fresh = False                      # True when marker detected this frame
+
+        # Per-camera raw signals and detection flags
+        self.cam_signal_a = [0, 0, 0]
+        self.cam_signal_b = [0, 0, 0]
+        self.cam_fresh_a = False
+        self.cam_fresh_b = False
+
+        # Fused result: best available world-frame pose
+        self.camera_sensor_signal = [0, 0, 0]  # signal from chosen camera
+        self.camera_pose = [0, 0, 0]            # world frame [x, y, theta]
+        self.camera_is_fresh = False             # True when any camera detected this frame
+        self.camera_source_label = '-'           # which camera provided the detection
+
         self.extended_kalman_filter = extended_kalman_filter.ExtendedKalmanFilter(
             x_0=[0, 0, 0], Sigma_0=parameters.I3 * 10e12, encoder_counts_0=0)
 
@@ -279,18 +329,42 @@ class Robot:
         delta_t = 0.1
         self.extended_kalman_filter.update(u_t, z_t, delta_t)
 
+    def _fuse_cameras(self):
+        """Read both cameras, pick the best fresh detection.
+
+        CameraSensor.get_signal() now returns [x, y, theta] in world frame
+        when both world and robot markers are visible, or raw camera-frame
+        values as fallback.
+        """
+        # Camera A
+        self.cam_signal_a, self.cam_fresh_a = self.camera_a.get_signal(self.cam_signal_a)
+
+        # Camera B
+        if self.camera_b is not None:
+            self.cam_signal_b, self.cam_fresh_b = self.camera_b.get_signal(self.cam_signal_b)
+        else:
+            self.cam_fresh_b = False
+
+        # Priority: Camera A if fresh, else Camera B if fresh, else stale
+        if self.cam_fresh_a:
+            self.camera_sensor_signal = self.cam_signal_a
+            self.camera_pose = self.cam_signal_a[:3]  # [x, y, theta]
+            self.camera_is_fresh = True
+            self.camera_source_label = 'A'
+        elif self.cam_fresh_b:
+            self.camera_sensor_signal = self.cam_signal_b
+            self.camera_pose = self.cam_signal_b[:3]
+            self.camera_is_fresh = True
+            self.camera_source_label = 'B'
+        else:
+            self.camera_is_fresh = False
+            self.camera_source_label = '-'
+
     def control_loop(self, cmd_speed=0, cmd_steering_angle=0, logging_switch_on=False):
-        # get raw camera signal in camera frame + whether marker was detected
-        self.camera_sensor_signal, self.camera_is_fresh = self.camera_sensor.get_signal(self.camera_sensor_signal)
+        # get camera detections and fuse
+        self._fuse_cameras()
 
-        # transform to world frame - this is what EKF uses as measurement z_t
-        self.camera_pose = parameters.camera_to_world(self.camera_sensor_signal)
-
-        fresh_str = "FRESH" if self.camera_is_fresh else "STALE"
-        print(f"Camera [{fresh_str}] raw: ",
-              int(100 * self.camera_sensor_signal[0]),
-              int(100 * self.camera_sensor_signal[1]),
-              int(100 * self.camera_sensor_signal[2]))
+        fresh_str = f"FRESH:{self.camera_source_label}" if self.camera_is_fresh else "STALE"
         print(f"Camera [{fresh_str}] world:",
               round(self.camera_pose[0], 3),
               round(self.camera_pose[1], 3),
@@ -309,7 +383,7 @@ class Robot:
         if self.msg_receiver is not None:
             self.msg_sender.send_control_signal(control_signal)
 
-        # log raw camera signal so offline EKF can rerun the transform if needed
+        # log data
         self.data_logger.log(logging_switch_on, time.perf_counter(), control_signal,
                              self.robot_sensor_signal, self.camera_sensor_signal,
                              self.extended_kalman_filter.state_mean,

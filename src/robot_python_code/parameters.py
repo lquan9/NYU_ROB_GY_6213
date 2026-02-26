@@ -12,43 +12,92 @@ localPort = 4010
 arduinoPort = 4010
 bufferSize = 1024
 
-# Camera parameters
-camera_id = 0
-# Camera source: use an integer for a local device (e.g. 0, 1),
-# or an MJPEG stream URL for a network camera:
-#   camera_source = "http://192.168.0.100:8090/video"
-# When set to None, falls back to camera_id.
-camera_source = None
-marker_length = 0.10 # we are using 100mm markersize 6x6 ID is zero
-# need to update the camera matrix and dist_coeffs acc to intel realsense 
-camera_matrix = np.array([[644.10406494, 0.00000000e+00 ,641.55847168],      
- [0.00000000e+00 ,643.3069458, 372.71740723],
- [0.00000000e+00 ,0.00000000e+00 ,1.00000000e+00]], dtype=np.float32)
-dist_coeffs = np.array([-0.05591936, 0.06711996, 0.00015107, 0.00067795, -0.02167729], dtype=np.float32)
+# ── ArUco markers ───────────────────────────────────────────────
+# Robot tag (on top of the robot — the thing we're tracking)
+robot_marker_id = 0
+robot_marker_length = 0.10     # 100 mm
 
-# Camera to world frame transform
-# Measured: robot at world (0,0) gave tx=-1.76, ty=0.42
-#           robot at world (1.2,0) gave tx=-3.16, ty=-0.69
-camera_origin_tx = -1.69        # camera tx when robot at world (0,0)
-camera_origin_ty =  0.39        # camera ty when robot at world (0,0)
-camera_scale     =  0.6485      # average scale from both calibration points
-camera_rotation_matrix = np.array([    # full 2x2 rotation matrix
-    [-0.1176, -1.5289],
-    [ 0.9079, -1.2357]
-])
+# World-origin tag (on the floor — defines the global frame)
+world_marker_id = 1            # change to 2 if you use ID 2
+world_marker_length = 0.20     # adjust to actual printed size (meters)
 
-def camera_to_world(camera_signal):
-    """Transform raw camera signal [tx,ty,tz,rx,ry,rz] to world frame [x, y, theta]."""
+# Legacy alias
+marker_length = robot_marker_length
+
+# ── Camera A  ──────────────────────────────────────────
+camera_a = {
+    'name': 'Camera A',
+    'source': None,            # None → uses camera_id; or "http://<ip>:8090/video"
+    'camera_id': 0,
+    'camera_matrix': np.array([
+        [644.10406494, 0.0,          641.55847168],
+        [0.0,          643.3069458,  372.71740723],
+        [0.0,          0.0,          1.0         ]
+    ], dtype=np.float32),
+    'dist_coeffs': np.array(
+        [-0.05591936, 0.06711996, 0.00015107, 0.00067795, -0.02167729], dtype=np.float32),
+}
+
+# ── Camera B — set source to None to disable ───────
+camera_b = {
+    'name': 'Camera B',
+    'source': None,            # e.g. "http://<ip-b>:8090/video"
+    'camera_id': 0,
+    'camera_matrix': np.array([
+        [644.10406494, 0.0,          641.55847168],
+        [0.0,          643.3069458,  372.71740723],
+        [0.0,          0.0,          1.0         ]
+    ], dtype=np.float32),
+    'dist_coeffs': np.array(
+        [-0.05591936, 0.06711996, 0.00015107, 0.00067795, -0.02167729], dtype=np.float32),
+}
+
+# ── Backward-compat aliases (Camera A) ─────────────────────────
+camera_id = camera_a['camera_id']
+camera_source = camera_a['source']
+camera_matrix = camera_a['camera_matrix']
+dist_coeffs = camera_a['dist_coeffs']
+
+
+def relative_pose(rvec_ref, tvec_ref, rvec_target, tvec_target):
+    """Compute target pose in reference tag's frame.
+
+    Compute the target tag's position and yaw in the reference tag's coordinate system.
+
+    Returns [x, y, theta] of target in reference frame (2D ground plane).
+    """
+    import cv2 as _cv2
+    # Build 4x4 transforms: tag-in-camera
+    R_ref, _ = _cv2.Rodrigues(np.array(rvec_ref, dtype=np.float64))
+    R_tgt, _ = _cv2.Rodrigues(np.array(rvec_target, dtype=np.float64))
+    t_ref = np.array(tvec_ref, dtype=np.float64).reshape(3, 1)
+    t_tgt = np.array(tvec_target, dtype=np.float64).reshape(3, 1)
+
+    # T_ref_in_cam and T_tgt_in_cam
+    # target_in_ref = inv(T_ref) @ T_tgt
+    # inv(T_ref): R^T, -R^T @ t
+    R_ref_inv = R_ref.T
+    t_ref_inv = -R_ref.T @ t_ref
+
+    # Position of target in reference frame
+    pos = R_ref_inv @ t_tgt + t_ref_inv
+    x_world = float(pos[0])
+    y_world = float(pos[1])
+
+    # Rotation of target in reference frame
+    R_rel = R_ref_inv @ R_tgt
+    theta_world = float(math.atan2(R_rel[1, 0], R_rel[0, 0]))
+
+    return [x_world, y_world, theta_world]
+
+
+def camera_to_world(camera_signal, cam_cfg=None):
+    """Legacy transform"""
+    # For new data, use relative_pose()
     tx = camera_signal[0]
     ty = camera_signal[1]
     rz = camera_signal[5]
-    dx = tx - camera_origin_tx
-    dy = ty - camera_origin_ty
-    R = camera_rotation_matrix
-    x_world = camera_scale * (R[0, 0] * dx + R[0, 1] * dy)
-    y_world = -camera_scale * (R[1, 0] * dx + R[1, 1] * dy)
-    theta_world = rz
-    return [x_world, y_world, theta_world]
+    return [tx, ty, rz]
 
 # Robot parameters
 num_robot_sensors = 2 # encoder, steering

@@ -81,7 +81,8 @@ def main_page():
 
     # Set up the video stream, not needed for lab 1
     if STREAM_VIDEO:
-        cam_src = parameters.camera_source if parameters.camera_source is not None else parameters.camera_id
+        cam_a = parameters.camera_a
+        cam_src = cam_a['source'] if cam_a['source'] is not None else cam_a['camera_id']
         video_capture = cv2.VideoCapture(cam_src)
 
     # Enable frame grabs from the video stream.

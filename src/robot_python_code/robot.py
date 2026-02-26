@@ -106,6 +106,12 @@ class CameraSensor:
         source = parameters.camera_source if parameters.camera_source is not None else camera_id
         self.source = source
         self.cap = cv2.VideoCapture(source)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)    # 1=manual, 3=auto
+        self.cap.set(cv2.CAP_PROP_EXPOSURE, 150)        # adjust this value (50-500)
+        self.cap.set(cv2.CAP_PROP_AUTO_WB, 0)           # disable auto white balance
+
         if isinstance(source, str):
             print(f"[CameraSensor] Using network camera: {source}")
         else:
@@ -318,3 +324,8 @@ class Robot:
                              self.robot_sensor_signal, self.camera_sensor_signal,
                              self.extended_kalman_filter.state_mean,
                              self.extended_kalman_filter.state_covariance)
+
+
+
+
+

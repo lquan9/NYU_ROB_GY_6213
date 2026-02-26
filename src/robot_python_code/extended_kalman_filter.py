@@ -2,6 +2,8 @@
 import numpy as np
 import math
 from pathlib import Path
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 
@@ -75,11 +77,11 @@ class ExtendedKalmanFilter:
         innovation[2] = math.atan2(math.sin(innovation[2]), math.cos(innovation[2]))
 
         # Outlier rejection: skip correction if measurement is too far from prediction
-        # Uses Mahalanobis distance — rejects if > 3 sigma
+        # Uses Mahalanobis distance — rejects if > 5 sigma (chi2 3DOF threshold=25)
         try:
             S_inv = np.linalg.inv(S)
             mahal_dist_sq = float(innovation.T @ S_inv @ innovation)
-            if mahal_dist_sq > 9.0:  # chi-squared 3 DOF, ~99% threshold
+            if mahal_dist_sq > 25.0:  # raised from 9.0 — was too aggressive
                 # Measurement is an outlier — use prediction only
                 self.state_mean = self.predicted_state_mean
                 self.state_covariance = self.predicted_state_covariance
@@ -136,6 +138,9 @@ class ExtendedKalmanFilter:
 
         # Angular velocity from Ackermann geometry
         steer_rad = math.radians(steering_angle)
+        # Correct for physical servo asymmetry: right turns (positive) have less deflection
+        if steering_angle > 0:
+            steer_rad = steer_rad * parameters.steering_scale_right
         if abs(steer_rad) > 1e-6 and parameters.wheelbase > 1e-6:
             omega = v * math.tan(steer_rad) / parameters.wheelbase
         else:
@@ -199,10 +204,10 @@ class ExtendedKalmanFilter:
 
     # This function returns the Q_t matrix which contains measurement covariance terms.
     def get_Q(self):
-        # Lower values = trust camera MORE (camera is more accurate than encoder)
-        var_x     = 0.008
-        var_y     = 0.018
-        var_theta = 0.025
+        # Lower values = trust camera MORE
+        var_x     = 0.003   # was 0.008
+        var_y     = 0.005   # was 0.018
+        var_theta = 0.01    # was 0.0250
 
         return np.array([
             [var_x,  0,      0        ],
@@ -223,7 +228,8 @@ class KalmanFilterPlot:
 
         # Plot covariance ellipse
         lambda_, v = np.linalg.eig(state_covaraiance)
-        lambda_ = np.sqrt(lambda_)
+        # lambda_ = np.sqrt(lambda_)
+        lambda_ = np.sqrt(np.abs(lambda_))
         xy = (state_mean[0], state_mean[1])
         angle=np.rad2deg(np.arctan2(*v[:,0][::-1]))
         ell = Ellipse(xy, alpha=0.5, facecolor='red',width=lambda_[0], height=lambda_[1], angle = angle)
@@ -235,20 +241,21 @@ class KalmanFilterPlot:
         plt.plot([state_mean[0], state_mean[0]+ self.dir_length*math.cos(state_mean[2]) ], [state_mean[1], state_mean[1]+ self.dir_length*math.sin(state_mean[2]) ],'r')
         plt.xlabel('X(m)')
         plt.ylabel('Y(m)')
-        plt.axis([-4, 12, -6, 6])
+        # plt.axis([-4, 12, -6, 6])
+        plt.axis([-2,4,-2,2])
         plt.grid()
         plt.draw()
         plt.pause(0.1)
 
 
+
 # Code to run your EKF offline with a data file.
 def offline_efk(use_correction=True):
-
     # Get data to filter
-    
+    plt.ion()
     # filename = './data/data_straight/btf/robot_data_40_15_10_02_26_23_13_58.pkl'
-    filename = '/Users/jotheeshkummathi/Desktop/NYUSA/Semester 4/RLAN/labs/btf-robot/data/data_straight/btf/robot_data_40_2_25_02_26_19_06_07.pkl'
-
+    filename = '/Users/jotheeshkummathi/Desktop/NYUSA/Semester 4/RLAN/labs/btf-robot/data/data_straight/btf/robot_data_60_10_26_02_26_04_47_34.pkl'
+    
     ekf_data = data_handling.get_file_data_for_kf(filename)
 
     # Transform initial camera reading to world frame
@@ -262,7 +269,7 @@ def offline_efk(use_correction=True):
     kalman_filter_plot = KalmanFilterPlot()
 
     # Track previous camera reading to detect stale (no new detection)
-    prev_cam_raw = ekf_data[0][3]
+    # prev_cam_raw = ekf_data[0][3]
 
     # Loop over data
     for t in range(1, len(ekf_data)):
@@ -275,14 +282,18 @@ def offline_efk(use_correction=True):
         cam_world = parameters.camera_to_world(cam_raw)
 
         # Detect stale camera: if raw reading is unchanged, no new detection
-        cam_is_fresh = (cam_raw[0] != prev_cam_raw[0] or
-                        cam_raw[1] != prev_cam_raw[1] or
-                        cam_raw[5] != prev_cam_raw[5])
-        prev_cam_raw = cam_raw
+        # cam_is_fresh = (cam_raw[0] != prev_cam_raw[0] or
+        #                 cam_raw[1] != prev_cam_raw[1] or
+        #                 cam_raw[5] != prev_cam_raw[5])
+        # prev_cam_raw = cam_raw
+        cam_is_fresh = (cam_raw[2] != 0.0)
 
         # Only use correction if camera saw the marker AND correction is enabled
         if use_correction and cam_is_fresh:
             z_t = np.array([cam_world[0], cam_world[1], cam_world[2]])
+            if t < 5 or t % 20 == 0:  # print first 5 and every 20th step
+                print(f"t={t:3d} cam_world=({cam_world[0]:.3f},{cam_world[1]:.3f},{cam_world[2]:.3f}) "
+                      f"ekf=({ekf.state_mean[0]:.3f},{ekf.state_mean[1]:.3f},{ekf.state_mean[2]:.3f})")
         else:
             z_t = None
 
@@ -295,4 +306,7 @@ def offline_efk(use_correction=True):
 
 
 if __name__ == "__main__":
-    offline_efk(use_correction=False)   # Start with prediction only!
+    offline_efk(use_correction=True)   # Start with prediction only!
+
+
+

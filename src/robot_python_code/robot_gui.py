@@ -206,6 +206,7 @@ def main_page():
             y_est = robot.extended_kalman_filter.state_mean[1]
             lambda_, v = np.linalg.eig(covar_matrix)
             lambda_ = np.sqrt(lambda_)
+            # lambda_ = np.sqrt(np.abs(lambda_))
             ell = Ellipse(xy=(x_est, y_est), alpha=0.5, facecolor='red',width=lambda_[0], height=lambda_[1], angle=np.rad2deg(np.arctan2(*v[:,0][::-1])))
             ax = fig.gca()
             ax.add_artist(ell)
@@ -665,7 +666,7 @@ def main_page():
                               ekf_tab_state['online_trail_y'].clear()
                           )).props('color=warning')
 
-            online_ekf_plot = ui.pyplot(figsize=(6, 5)).classes('w-full')
+            online_ekf_plot = ui.pyplot(figsize=(12, 5)).classes('w-full h-1/2')
 
             # OFFLINE — Replay pkl file
             with ui.card().classes('w-full'):
@@ -712,12 +713,13 @@ def main_page():
                         fig.clear()
                         ax = fig.add_subplot(1, 1, 1)
                         # Set axis limits first so ellipse clips properly
-                        ax.set_xlim(-3, 3)
-                        ax.set_ylim(-3, 3)
+                        ax.set_xlim(-2, 5)
+                        ax.set_ylim(-2, 5)
                         ax.set_aspect('equal', adjustable='box')
                         # Covariance ellipse - clipped to axes
                         lambda_, v = np.linalg.eig(covar)
                         lambda_ = np.sqrt(np.abs(lambda_))
+                        #  lambda_ = np.sqrt(lambda_)
                         xy = (state_mean[0], state_mean[1])
                         angle = np.rad2deg(np.arctan2(*v[:, 0][::-1]))
                         ell = Ellipse(xy, alpha=0.5, facecolor='red',
@@ -828,6 +830,8 @@ def main_page():
                                         cam_raw[5] != prev_cam_raw[5])
                         prev_cam_raw = cam_raw
 
+                        #  cam_is_fresh = (cam_raw[2] != 0.0)
+
                         # Only use correction if camera saw marker AND correction enabled
                         if use_correction and cam_is_fresh:
                             z_t = np.array([cam_world[0], cam_world[1], cam_world[2]])
@@ -882,7 +886,7 @@ def main_page():
                 scale = parameters.covariance_plot_scale
                 covar = scale * np.array(ekf.state_covariance[0:2, 0:2], dtype=float)
                 lam, v = np.linalg.eig(covar)
-                lam = np.sqrt(np.abs(lam))
+                lam = np.sqrt(lam)
                 ang = np.rad2deg(np.arctan2(*v[:, 0][::-1]))
                 ell = Ellipse(xy=(x_est, y_est), width=lam[0], height=lam[1],
                               angle=ang, alpha=0.3, facecolor='red', edgecolor='red')
@@ -895,15 +899,17 @@ def main_page():
                             xytext=(x_est + start_offset * math.cos(theta), y_est + start_offset * math.sin(theta)),
                             arrowprops=dict(arrowstyle='->', color='green', lw=2),zorder=7)
                 # ax.plot(x_cam, y_cam, 'b^', markersize=7, label='Camera', zorder=4)
-                ax.plot(0, 1.778, 'bv', markersize=7, label='Camera', zorder=4)
+                ax.plot(1.3462, 1.651, 'bv', markersize=7, label='Camera', zorder=4)
                 ax.plot(0, 0, 'b*', markersize=5, label='Initial position', zorder=4)
                 ax.set_xlabel('X (m)')
                 ax.set_ylabel('Y (m)')
                 ax.set_title('Live EKF')
                 ax.legend(loc='upper right', fontsize=8)
                 ax.grid(True, alpha=0.3)
-                ax.set_xlim(-2, 5)
-                ax.set_ylim(-2, 5)
+                ax.set_xlim(-1, 5)
+                ax.set_ylim(-2, 2.5)
+                ax.set_xticks(np.arange(-1, 5, 1))
+                ax.set_yticks(np.arange(-2, 2.5, 1))
                 plt.draw()
         except Exception:
             pass

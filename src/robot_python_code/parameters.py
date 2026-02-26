@@ -14,7 +14,7 @@ bufferSize  = 1024
 # ── Camera ────────────────────────────────────────────────────────
 camera_id     = 0
 camera_source = None   # set to MJPEG URL string if using a network cam
-marker_length = 0.15   # 100mm marker, 6x6 ArUco, ID 0
+marker_length = 0.15   # 150mm marker, 6x6 ArUco, ID 0
 
 # Intel RealSense intrinsics
 camera_matrix = np.array([
@@ -30,10 +30,10 @@ dist_coeffs = np.array(
 
 # Camera-to-world transform — calibrated from (0,0) and (0,0.5).
 # Row 1 negated to fix x-axis reflection (camera has axis flip vs world frame).
-camera_A = np.array([[-0.703448,  0.441379],
-                     [ 0.441379,  0.703448]])
-camera_b = np.array([-1.232000, 1.724000])
-camera_theta_offset = 0.000000
+camera_A = np.array([[-1.146789, 0.688073],
+                     [-0.101937, 1.172273]])
+camera_b = np.array([0.041284, 0.403670])
+camera_theta_offset = 0.000000  # computed from calibration data at 0° heading
 
 
 def camera_to_world(camera_signal):
@@ -125,21 +125,25 @@ data_name_list = ['time', 'control_signal', 'robot_sensor_signal',
 #    Trial 
 trial_type          = "steering"   # "steering" or "distance"
 extra_trial_log_time = 2000        # ms
-trial_max_speed     = 45
+trial_max_speed     = 40
 trial_time          = 5000         # ms
-trial_input         = 0          # delta for steering, u_x for distance
+trial_input         = 10         # delta for steering, u_x for distance
 
 #    Motion model 
 counts_to_m          = 3518
 distance_variance_a  = 0.0001
 distance_variance_b  = 0.01
 steering_to_w        = 0.0024
-steering_variance_a  = 0.0001
-steering_variance_b  = -0.000635
+steering_variance_a  = 0.001
+steering_variance_b  = 0.05  #-0.000635 
 wheelbase            = 0.1444
 track_width          = 0.150
 wheel_radius         = 0.034
 max_steer_deg        = 20.0
+# Servo asymmetry correction: right turns (positive steering) have less deflection.
+# Tune by comparing right-turn arc radius vs left-turn arc radius.
+# 1.0 = symmetric (no correction). < 1.0 = right turns are physically smaller.
+steering_scale_right = 0.7     # start here, tune up/down until right≈left radius
 
 #    Kalman filter 
 I3                   = np.eye(3)

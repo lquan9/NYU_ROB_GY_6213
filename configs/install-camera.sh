@@ -130,7 +130,7 @@ install_service() {
             dry "Would run: pip install -e ${PROJECT_DIR}[dev]"
         else
             info "Creating virtual environment at ${VENV_DIR}..."
-            sudo -u "${TARGET_USER}" python3 -m venv "${VENV_DIR}"
+            sudo -u "${TARGET_USER}" python3 -m venv --system-site-packages "${VENV_DIR}"
         fi
     else
         info "Venv exists:  ${VENV_DIR} ✓"

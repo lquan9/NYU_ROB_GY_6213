@@ -118,7 +118,7 @@ install_service() {
         else
             warn "Virtual environment not found at ${VENV_DIR}"
             info "Creating venv and installing package..."
-            sudo -u "${TARGET_USER}" python3 -m venv "${VENV_DIR}"
+            sudo -u "${TARGET_USER}" python3 -m venv --system-site-packages "${VENV_DIR}"
             sudo -u "${TARGET_USER}" "${VENV_DIR}/bin/pip" install --upgrade pip
             sudo -u "${TARGET_USER}" "${VENV_DIR}/bin/pip" install -e "${PROJECT_DIR}[dev]"
         fi

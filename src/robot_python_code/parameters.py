@@ -14,6 +14,11 @@ bufferSize = 1024
 
 # Camera parameters
 camera_id = 0
+# Camera source: use an integer for a local device (e.g. 0, 1),
+# or an MJPEG stream URL for a network camera:
+#   camera_source = "http://192.168.0.100:8090/video"
+# When set to None, falls back to camera_id.
+camera_source = None
 marker_length = 0.10 # we are using 100mm markersize 6x6 ID is zero
 # need to update the camera matrix and dist_coeffs acc to intel realsense 
 camera_matrix = np.array([[1.41089024e+03, 0.00000000e+00 ,5.34757040e+02],      

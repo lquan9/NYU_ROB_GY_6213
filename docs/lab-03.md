@@ -215,6 +215,45 @@ Run the EKF **live on the robot** using real-time wheel encoder data and camera 
 | 2 | Encoders + Camera | Offline | Camera | Bounded (corrected by measurements) |
 | 3 | Encoders + Camera | Online | Camera | Bounded (real-time correction) |
 
+### Camera Setup
+
+#### Remote option
+```
+┌──────────────────────┐              ┌──────────────────────┐
+│  CAMERA COMPUTER     │              │  ROBOT               │
+│                      │   HTTP/MJPEG │                      │
+│  USB Camera ──►      │              │                      │
+│  camera_stream_server├─────────────►|  CameraSensor        │
+│  (port 8090)         │  same WiFi   │  (ArUco detection)   │
+│                      │   network    │         │            │
+│  Browse live view at │              │         ▼            │
+│  http://<ip>:8090    │              │  Extended Kalman     │
+└──────────────────────┘              │  Filter (EKF)        │
+                                      │         │            │
+                                      │         ▼            │
+                                      │  NiceGUI (port 8080) │
+                                      └──────────────────────┘
+```
+
+#### Install as a service
+```bash
+# Clone the repo on the camera computer, then:
+sudo ./configs/install-camera.sh                         # defaults: camera 0, port 8090
+sudo ./configs/install-camera.sh --camera 1 --port 9000  # custom camera & port
+sudo ./configs/install-camera.sh --status                # check status & logs
+sudo ./configs/install-camera.sh --remove                # uninstall
+```
+
+#### Configure the robot to use the remote camera
+Edit `src/robot_python_code/parameters.py` on the robot:
+```python
+camera_source = "http://<camera-computer-ip>:8090/video"
+```
+
+#### Verify
+- Browse `http://<camera-computer-ip>:8090` to see the live stream
+- Health check: `curl http://<camera-computer-ip>:8090/health`
+
 ---
 
 ## File References
@@ -227,4 +266,7 @@ Run the EKF **live on the robot** using real-time wheel encoder data and camera 
 | [`src/robot_python_code/data_handling.py`](../src/robot_python_code/data_handling.py) | Data loading and trial file management |
 | [`src/robot_python_code/motion_models.py`](../src/robot_python_code/motion_models.py) | Motion model definitions |
 | [`configs/robot-gui.service`](../configs/robot-gui.service) | Systemd service for headless GUI deployment |
-| [`configs/install-service.sh`](../configs/install-service.sh) | Service installation script |
+| [`configs/install-service.sh`](../configs/install-service.sh) | GUI service installation script |
+| [`src/robot_python_code/camera_stream_server.py`](../src/robot_python_code/camera_stream_server.py) | MJPEG camera stream server |
+| [`configs/camera-stream.service`](../configs/camera-stream.service) | Systemd service for remote camera stream |
+| [`configs/install-camera.sh`](../configs/install-camera.sh) | Camera service installation script |

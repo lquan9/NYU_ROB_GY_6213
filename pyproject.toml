@@ -43,6 +43,7 @@ docs = [
 
 [project.scripts]
 gui = "robot_python_code.robot_gui:main"
+camera-stream = "robot_python_code.camera_stream_server:main"
 
 [tool.hatch.build.targets.wheel.force-include]
 "docs/assets" = "robot_python_code/assets"

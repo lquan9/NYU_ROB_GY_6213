@@ -61,9 +61,8 @@ class ExtendedKalmanFilter:
         H = self.get_H()          # 3x3: dh/dx
         Q_t = self.get_Q()        # 3x3: camera measurement noise
 
-        # Kalman Gain: K = Sigma_bar * H^T * (H * Sigma_bar * H^T + Q)^-1
+        # Innovation covariance: S = H * Sigma_bar * H^T + Q
         S = H @ Sigma_bar @ H.T + Q_t
-        K = Sigma_bar @ H.T @ np.linalg.inv(S)
 
         # Measurement function h(x) - what we expect to see
         h_x = self.get_h_function(x_bar_t)
@@ -75,12 +74,35 @@ class ExtendedKalmanFilter:
         # Wrap theta innovation to [-pi, pi] to avoid angle jumps
         innovation[2] = math.atan2(math.sin(innovation[2]), math.cos(innovation[2]))
 
+        # Outlier rejection: skip correction if measurement is too far from prediction
+        # Uses Mahalanobis distance — rejects if > 3 sigma
+        try:
+            S_inv = np.linalg.inv(S)
+            mahal_dist_sq = float(innovation.T @ S_inv @ innovation)
+            if mahal_dist_sq > 9.0:  # chi-squared 3 DOF, ~99% threshold
+                # Measurement is an outlier — use prediction only
+                self.state_mean = self.predicted_state_mean
+                self.state_covariance = self.predicted_state_covariance
+                return
+        except np.linalg.LinAlgError:
+            self.state_mean = self.predicted_state_mean
+            self.state_covariance = self.predicted_state_covariance
+            return
+
+        # Kalman Gain: K = Sigma_bar * H^T * S^-1
+        K = Sigma_bar @ H.T @ S_inv
+
         # Corrected state mean
         x_t = x_bar_t + K @ innovation
 
-        # Corrected covariance: (I - K*H) * Sigma_bar
+        # Wrap theta to [-pi, pi] after correction
+        x_t[2] = math.atan2(math.sin(x_t[2]), math.cos(x_t[2]))
+
+        # Joseph-form covariance update (numerically more stable)
+        # Sigma = (I - KH) * Sigma_bar * (I - KH)^T + K * Q * K^T
         I = np.eye(3)
-        Sigma_t = (I - K @ H) @ Sigma_bar
+        IKH = I - K @ H
+        Sigma_t = IKH @ Sigma_bar @ IKH.T + K @ Q_t @ K.T
 
         self.state_mean = x_t.tolist()
         self.state_covariance = Sigma_t
@@ -115,7 +137,7 @@ class ExtendedKalmanFilter:
         # Angular velocity from Ackermann geometry
         steer_rad = math.radians(steering_angle)
         if abs(steer_rad) > 1e-6 and parameters.wheelbase > 1e-6:
-            omega = v * math.tan(-steer_rad) / parameters.wheelbase
+            omega = v * math.tan(steer_rad) / parameters.wheelbase
         else:
             omega = 0.0
 
@@ -163,10 +185,10 @@ class ExtendedKalmanFilter:
     
     # This function returns the R_t matrix which contains transition function covariance terms.
     def get_R(self, s, steering=0):
-        # Distance variance scales with distance travelled
-        var_s = max(0.0, parameters.distance_variance_a + parameters.distance_variance_b * abs(s))
-        # Steering variance scales with steering angle
-        var_w = max(0.0, parameters.steering_variance_a + parameters.steering_variance_b * abs(steering))
+        # Distance variance scales with distance travelled (with minimum floor)
+        var_s = max(1e-6, parameters.distance_variance_a + parameters.distance_variance_b * abs(s))
+        # Steering variance scales with steering angle (with minimum floor)
+        var_w = max(1e-6, parameters.steering_variance_a + parameters.steering_variance_b * abs(steering))
 
         R = np.array([
             [var_s, 0    ],
@@ -177,9 +199,11 @@ class ExtendedKalmanFilter:
 
     # This function returns the Q_t matrix which contains measurement covariance terms.
     def get_Q(self):
-        var_x     = 0.01    # meters² -  after camera experiment
-        var_y     = 0.01    # meters² -  after camera experiment
-        var_theta = 0.05   # rad²/s² (0.12 deg²/s² converted)
+        # Lower values = trust camera MORE (camera is more accurate than encoder)
+        var_x     = 0.008
+        var_y     = 0.018
+        var_theta = 0.025
+
         return np.array([
             [var_x,  0,      0        ],
             [0,      var_y,  0        ],

@@ -253,6 +253,7 @@ class Robot:
         self.camera_sensor_signal = [0, 0, 0, 0, 0, 0]  # raw camera frame values
         self.camera_pose = [0, 0, 0]                     # world frame [x, y, theta]
         self.camera_is_fresh = False                      # True when marker detected this frame
+        self.last_update_time = time.perf_counter()       # for computing actual delta_t
         self.extended_kalman_filter = extended_kalman_filter.ExtendedKalmanFilter(
             x_0=[0, 0, 0], Sigma_0=parameters.I3 * 10e12, encoder_counts_0=0)
 
@@ -276,7 +277,10 @@ class Robot:
             z_t = np.array([self.camera_pose[0], self.camera_pose[1], self.camera_pose[2]])
         else:
             z_t = None  # EKF will run prediction-only
-        delta_t = 0.1
+        # Use actual elapsed time instead of hardcoded 0.1
+        now = time.perf_counter()
+        delta_t = max(0.01, min(0.5, now - self.last_update_time))
+        self.last_update_time = now
         self.extended_kalman_filter.update(u_t, z_t, delta_t)
 
     def control_loop(self, cmd_speed=0, cmd_steering_angle=0, logging_switch_on=False):

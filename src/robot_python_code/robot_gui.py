@@ -706,35 +706,41 @@ def main_page():
                 ]
                 covar = playback['covariances'][frame_idx]
                 dir_length = 0.1
-                with offline_traj_plot:
-                    fig = offline_traj_plot.fig
-                    fig.clear()
-                    ax = fig.add_subplot(1, 1, 1)
-                    # Covariance ellipse - same as KalmanFilterPlot
-                    lambda_, v = np.linalg.eig(covar)
-                    lambda_ = np.sqrt(np.abs(lambda_))
-                    xy = (state_mean[0], state_mean[1])
-                    angle = np.rad2deg(np.arctan2(*v[:, 0][::-1]))
-                    ell = Ellipse(xy, alpha=0.5, facecolor='red',
-                                  width=lambda_[0], height=lambda_[1], angle=angle)
-                    ax.add_artist(ell)
-                    # Trail so far
-                    if frame_idx > 0:
-                        ax.plot(playback['est_x'][:frame_idx+1],
-                                playback['est_y'][:frame_idx+1], 'r-', linewidth=1, alpha=0.5, label='EKF')
-                        ax.plot(playback['cam_x'][:frame_idx+1],
-                                playback['cam_y'][:frame_idx+1], 'b-', linewidth=1, alpha=0.5, label='Camera')
-                    # Current dot + heading arrow - same as KalmanFilterPlot
-                    ax.plot(state_mean[0], state_mean[1], 'ro',label='EKF')
-                    ax.plot([state_mean[0], state_mean[0] + dir_length * math.cos(state_mean[2])],
-                            [state_mean[1], state_mean[1] + dir_length * math.sin(state_mean[2])], 'r',label='_nolegend_')
-                    ax.set_xlabel('X(m)')
-                    ax.set_ylabel('Y(m)')
-                    ax.set_title('Full EKF' if playback['use_correction'] else 'Prediction Only')
-                    ax.set_xlim(-3, 3)
-                    ax.set_ylim(-3, 3)
-                    ax.grid(True)
-                    ax.legend(fontsize=8)
+                try:
+                    with offline_traj_plot:
+                        fig = offline_traj_plot.fig
+                        fig.clear()
+                        ax = fig.add_subplot(1, 1, 1)
+                        # Set axis limits first so ellipse clips properly
+                        ax.set_xlim(-3, 3)
+                        ax.set_ylim(-3, 3)
+                        ax.set_aspect('equal', adjustable='box')
+                        # Covariance ellipse - clipped to axes
+                        lambda_, v = np.linalg.eig(covar)
+                        lambda_ = np.sqrt(np.abs(lambda_))
+                        xy = (state_mean[0], state_mean[1])
+                        angle = np.rad2deg(np.arctan2(*v[:, 0][::-1]))
+                        ell = Ellipse(xy, alpha=0.5, facecolor='red',
+                                      width=lambda_[0], height=lambda_[1], angle=angle,
+                                      clip_on=True)
+                        ax.add_artist(ell)
+                        # Trail so far
+                        if frame_idx > 0:
+                            ax.plot(playback['est_x'][:frame_idx+1],
+                                    playback['est_y'][:frame_idx+1], 'r-', linewidth=1, alpha=0.5, label='EKF')
+                            ax.plot(playback['cam_x'][:frame_idx+1],
+                                    playback['cam_y'][:frame_idx+1], 'b-', linewidth=1, alpha=0.5, label='Camera')
+                        # Current dot + heading arrow
+                        ax.plot(state_mean[0], state_mean[1], 'ro', label='_nolegend_')
+                        ax.plot([state_mean[0], state_mean[0] + dir_length * math.cos(state_mean[2])],
+                                [state_mean[1], state_mean[1] + dir_length * math.sin(state_mean[2])], 'r', label='_nolegend_')
+                        ax.set_xlabel('X (m)')
+                        ax.set_ylabel('Y (m)')
+                        ax.set_title('Full EKF' if playback['use_correction'] else 'Prediction Only')
+                        ax.grid(True, alpha=0.3)
+                        ax.legend(loc='upper right', fontsize=8)
+                except Exception as e:
+                    print(f"draw_frame error: {e}")
 
             def advance_frame():
                 if playback['frame'] >= len(playback['est_x']):
@@ -889,7 +895,8 @@ def main_page():
                             xytext=(x_est + start_offset * math.cos(theta), y_est + start_offset * math.sin(theta)),
                             arrowprops=dict(arrowstyle='->', color='green', lw=2),zorder=7)
                 # ax.plot(x_cam, y_cam, 'b^', markersize=7, label='Camera', zorder=4)
-                ax.plot(1.8, 1, 'bv', markersize=7, label='Camera', zorder=4)
+                ax.plot(0, 1.778, 'bv', markersize=7, label='Camera', zorder=4)
+                ax.plot(0, 0, 'b*', markersize=5, label='Initial position', zorder=4)
                 ax.set_xlabel('X (m)')
                 ax.set_ylabel('Y (m)')
                 ax.set_title('Live EKF')

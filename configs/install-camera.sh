@@ -111,25 +111,35 @@ install_service() {
     info "JPEG quality: ${QUALITY}"
     echo ""
 
-    if ! id "${TARGET_USER}" &>/dev/null; then
-        error "User '${TARGET_USER}' does not exist. Create it first or use --user <name>."
+    # ── Check system prerequisites ───────────────────────────────
+    if ! command -v python3 &>/dev/null; then
+        error "python3 not found. Install it first:\n       sudo apt update && sudo apt install python3 python3-venv"
     fi
 
+    if ! python3 -c "import venv" &>/dev/null; then
+        error "python3-venv module not found. Install it first:\n       sudo apt install python3-venv"
+    fi
+
+    PYTHON_VERSION="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+    info "Python:       ${PYTHON_VERSION}"
+
+    # ── Create venv if it doesn't exist ─────────────────────────
     if [[ ! -d "${VENV_DIR}" ]]; then
         if $DRY_RUN; then
             dry "Would create venv at ${VENV_DIR}"
             dry "Would run: pip install -e ${PROJECT_DIR}[dev]"
         else
-            warn "Virtual environment not found at ${VENV_DIR}"
-            info "Creating venv and installing package..."
+            info "Creating virtual environment at ${VENV_DIR}..."
             sudo -u "${TARGET_USER}" python3 -m venv "${VENV_DIR}"
-            sudo -u "${TARGET_USER}" "${VENV_DIR}/bin/pip" install --upgrade pip
-            sudo -u "${TARGET_USER}" "${VENV_DIR}/bin/pip" install -e "${PROJECT_DIR}[dev]"
         fi
+    else
+        info "Venv exists:  ${VENV_DIR} ✓"
     fi
 
+    # ── Install package into venv ───────────────────────────────
     if [[ ! -f "${ENTRY_POINT}" ]] && ! $DRY_RUN; then
-        warn "camera-stream entry point not found. Installing package into venv..."
+        info "Installing package into venv..."
+        sudo -u "${TARGET_USER}" "${VENV_DIR}/bin/pip" install --upgrade pip
         sudo -u "${TARGET_USER}" "${VENV_DIR}/bin/pip" install -e "${PROJECT_DIR}[dev]"
     fi
 

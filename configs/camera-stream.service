@@ -1,0 +1,30 @@
+[Unit]
+Description=ROB-GY 6213 Remote Camera MJPEG Stream
+Documentation=https://github.com/lquan9/NYU_ROB_GY_6213
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+Group=__GROUP__
+WorkingDirectory=__PROJECT_DIR__
+
+# Launch the MJPEG camera stream server from the project's virtual environment.
+# The `camera-stream` console_script is created by `pip install -e .[dev]` via pyproject.toml.
+ExecStart=__VENV_DIR__/bin/camera-stream --camera __CAMERA_ID__ --port __PORT__ --quality __QUALITY__
+
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+Restart=on-failure
+RestartSec=5
+
+Environment="PYTHONUNBUFFERED=1"
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=camera-stream
+
+[Install]
+WantedBy=multi-user.target

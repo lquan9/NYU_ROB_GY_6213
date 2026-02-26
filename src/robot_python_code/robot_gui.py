@@ -81,7 +81,8 @@ def main_page():
 
     # Set up the video stream, not needed for lab 1
     if STREAM_VIDEO:
-        video_capture = cv2.VideoCapture(parameters.camera_id)
+        cam_src = parameters.camera_source if parameters.camera_source is not None else parameters.camera_id
+        video_capture = cv2.VideoCapture(cam_src)
 
     # Enable frame grabs from the video stream.
     @app.get('/video/frame')

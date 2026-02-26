@@ -102,7 +102,14 @@ class DataLoader:
 class CameraSensor:
     def __init__(self, camera_id):
         self.camera_id = camera_id
-        self.cap = cv2.VideoCapture(camera_id)
+        # Resolve camera source: network URL takes priority over local index
+        source = parameters.camera_source if parameters.camera_source is not None else camera_id
+        self.source = source
+        self.cap = cv2.VideoCapture(source)
+        if isinstance(source, str):
+            print(f"[CameraSensor] Using network camera: {source}")
+        else:
+            print(f"[CameraSensor] Using local camera device: {source}")
         self.aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_6X6_250)
         self.parameters = aruco.DetectorParameters()
         self.detector = aruco.ArucoDetector(self.aruco_dict, self.parameters)

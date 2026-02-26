@@ -724,14 +724,14 @@ def main_page():
                         ax.plot(playback['cam_x'][:frame_idx+1],
                                 playback['cam_y'][:frame_idx+1], 'b-', linewidth=1, alpha=0.5, label='Camera')
                     # Current dot + heading arrow - same as KalmanFilterPlot
-                    ax.plot(state_mean[0], state_mean[1], 'ro')
+                    ax.plot(state_mean[0], state_mean[1], 'ro',label='EKF')
                     ax.plot([state_mean[0], state_mean[0] + dir_length * math.cos(state_mean[2])],
-                            [state_mean[1], state_mean[1] + dir_length * math.sin(state_mean[2])], 'r')
+                            [state_mean[1], state_mean[1] + dir_length * math.sin(state_mean[2])], 'r',label='_nolegend_')
                     ax.set_xlabel('X(m)')
                     ax.set_ylabel('Y(m)')
                     ax.set_title('Full EKF' if playback['use_correction'] else 'Prediction Only')
-                    ax.set_xlim(-4, 12)
-                    ax.set_ylim(-6, 6)
+                    ax.set_xlim(-3, 3)
+                    ax.set_ylim(-3, 3)
                     ax.grid(True)
                     ax.legend(fontsize=8)
 
@@ -790,7 +790,10 @@ def main_page():
                 try:
                     from robot_python_code import extended_kalman_filter as ekf_module
                     ekf_data = data_handling.get_file_data_for_kf(offline_ekf_selector.value)
-                    x_0 = [ekf_data[0][3][0], ekf_data[0][3][1], ekf_data[0][3][5]]
+
+                    # Transform initial camera reading to world frame
+                    cam_world_0 = parameters.camera_to_world(ekf_data[0][3])
+                    x_0 = [cam_world_0[0], cam_world_0[1], cam_world_0[2]]
                     Sigma_0 = np.diag([0.25, 0.25, 0.1])
                     encoder_counts_0 = ekf_data[0][2].encoder_counts
                     offline_filter = ekf_module.ExtendedKalmanFilter(x_0, Sigma_0, encoder_counts_0)
@@ -800,17 +803,37 @@ def main_page():
                     playback['frame'] = 0
                     playback['use_correction'] = use_correction
 
+                    # Track previous camera reading to detect stale (no new detection)
+                    prev_cam_raw = ekf_data[0][3]
+
                     for t in range(1, len(ekf_data)):
                         row = ekf_data[t]
                         delta_t = ekf_data[t][0] - ekf_data[t-1][0]
                         u_t = np.array([row[2].encoder_counts, row[2].steering])
-                        z_t = np.array([row[3][0], row[3][1], row[3][5]])
-                        offline_filter.update(u_t, z_t, delta_t, use_correction=use_correction)
+
+                        # Transform raw camera to world frame
+                        cam_raw = row[3]
+                        cam_world = parameters.camera_to_world(cam_raw)
+
+                        # Detect stale camera: if raw reading unchanged, no new detection
+                        cam_is_fresh = (cam_raw[0] != prev_cam_raw[0] or
+                                        cam_raw[1] != prev_cam_raw[1] or
+                                        cam_raw[5] != prev_cam_raw[5])
+                        prev_cam_raw = cam_raw
+
+                        # Only use correction if camera saw marker AND correction enabled
+                        if use_correction and cam_is_fresh:
+                            z_t = np.array([cam_world[0], cam_world[1], cam_world[2]])
+                        else:
+                            z_t = None
+
+                        offline_filter.update(u_t, z_t, delta_t, use_correction=(z_t is not None))
                         playback['est_x'].append(offline_filter.state_mean[0])
                         playback['est_y'].append(offline_filter.state_mean[1])
                         playback['est_theta'].append(offline_filter.state_mean[2])
-                        playback['cam_x'].append(row[3][0])
-                        playback['cam_y'].append(row[3][1])
+                        # Store world-frame camera positions for comparison
+                        playback['cam_x'].append(cam_world[0])
+                        playback['cam_y'].append(cam_world[1])
                         playback['times'].append(ekf_data[t][0])
                         playback['covariances'].append(
                             np.array(offline_filter.state_covariance[0:2, 0:2]).copy())
@@ -857,20 +880,22 @@ def main_page():
                 ell = Ellipse(xy=(x_est, y_est), width=lam[0], height=lam[1],
                               angle=ang, alpha=0.3, facecolor='red', edgecolor='red')
                 ax.add_artist(ell)
-                ax.plot(x_est, y_est, 'ro', markersize=8, label='EKF', zorder=5)
-                arrow_len = 0.1
+                ax.plot(x_est, y_est, 'ro', markersize=8, label='EKF', zorder=6)
+                arrow_len = 0.15
+                start_offset = 0.05
                 ax.annotate('', xy=(x_est + arrow_len * math.cos(theta),
                                     y_est + arrow_len * math.sin(theta)),
-                            xytext=(x_est, y_est),
-                            arrowprops=dict(arrowstyle='->', color='red', lw=2))
-                ax.plot(x_cam, y_cam, 'b^', markersize=7, label='Camera', zorder=4)
+                            xytext=(x_est + start_offset * math.cos(theta), y_est + start_offset * math.sin(theta)),
+                            arrowprops=dict(arrowstyle='->', color='green', lw=2),zorder=7)
+                # ax.plot(x_cam, y_cam, 'b^', markersize=7, label='Camera', zorder=4)
+                ax.plot(0, 0, 'b>', markersize=7, label='Camera', zorder=4)
                 ax.set_xlabel('X (m)')
                 ax.set_ylabel('Y (m)')
                 ax.set_title('Live EKF')
                 ax.legend(loc='upper right', fontsize=8)
                 ax.grid(True, alpha=0.3)
-                ax.set_xlim(-3, 3)
-                ax.set_ylim(-3, 3)
+                ax.set_xlim(-2, 5)
+                ax.set_ylim(-2, 5)
                 plt.draw()
         except Exception:
             pass

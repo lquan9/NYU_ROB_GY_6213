@@ -37,10 +37,12 @@ class ExtendedKalmanFilter:
         # Run motion model to get predicted state and distance travelled
         x_bar_t, s = self.g_function(x_tm1, u_t, delta_t)
         # Calculate predicted state covariance
-        G_x = self.get_G_x(x_tm1, s)
-        G_u = self.get_G_u(x_tm1, delta_t)
-        # Get motion model covariance
-        R_t = self.get_R(s)
+        # Use x_bar_t (predicted state with updated theta) for Jacobians
+        G_x = self.get_G_x(x_bar_t, s)
+        G_u = self.get_G_u(x_bar_t, delta_t)
+        # Get motion model covariance (depends on distance and steering)
+        steering = u_t[1]
+        R_t = self.get_R(s, steering)
         
         # Propagate covariance:
         # Sigma_bar = G_x * Sigma * G_x^T + G_u * R * G_u^T
@@ -160,9 +162,11 @@ class ExtendedKalmanFilter:
         return H
     
     # This function returns the R_t matrix which contains transition function covariance terms.
-    def get_R(self, s):
-        var_s = parameters.distance_variance_a   # 0.0015 m² constant
-        var_w = parameters.distance_variance_b   # 0.000366 rad²/s²
+    def get_R(self, s, steering=0):
+        # Distance variance scales with distance travelled
+        var_s = max(0.0, parameters.distance_variance_a + parameters.distance_variance_b * abs(s))
+        # Steering variance scales with steering angle
+        var_w = max(0.0, parameters.steering_variance_a + parameters.steering_variance_b * abs(steering))
 
         R = np.array([
             [var_s, 0    ],
@@ -219,33 +223,50 @@ def offline_efk(use_correction=True):
     # Get data to filter
     
     # filename = './data/data_straight/btf/robot_data_40_15_10_02_26_23_13_58.pkl'
-    filename = '/Users/jotheeshkummathi/Desktop/NYUSA/Semester 4/RLAN/labs/btf-robot/data/data_straight/btf/robot_data_60_-5_24_02_26_18_44_28.pkl'
+    filename = '/Users/jotheeshkummathi/Desktop/NYUSA/Semester 4/RLAN/labs/btf-robot/data/data_straight/btf/robot_data_40_2_25_02_26_19_06_07.pkl'
 
     ekf_data = data_handling.get_file_data_for_kf(filename)
 
-    # Instantiate PF with no initial guess
-    x_0 = [ekf_data[0][3][0], ekf_data[0][3][1], ekf_data[0][3][5]]
-    Sigma_0 = np.diag([0.25, 0.25, 0.1]) # Sigma_0 = parameters.I3
+    # Transform initial camera reading to world frame
+    cam_world_0 = parameters.camera_to_world(ekf_data[0][3])
+    x_0 = [cam_world_0[0], cam_world_0[1], cam_world_0[2]]
+    Sigma_0 = np.diag([0.25, 0.25, 0.1])
     encoder_counts_0 = ekf_data[0][2].encoder_counts
-    extended_kalman_filter = ExtendedKalmanFilter(x_0, Sigma_0, encoder_counts_0)
+    ekf = ExtendedKalmanFilter(x_0, Sigma_0, encoder_counts_0)
 
     # Create plotting tool for ekf
     kalman_filter_plot = KalmanFilterPlot()
+
+    # Track previous camera reading to detect stale (no new detection)
+    prev_cam_raw = ekf_data[0][3]
 
     # Loop over data
     for t in range(1, len(ekf_data)):
         row = ekf_data[t]
         delta_t = ekf_data[t][0] - ekf_data[t-1][0]           # time step
         u_t = np.array([row[2].encoder_counts, row[2].steering])  # encoder, steering
-        z_t = np.array([row[3][0], row[3][1], row[3][5]])         # camera x, y, theta
+
+        # Transform raw camera to world frame
+        cam_raw = row[3]
+        cam_world = parameters.camera_to_world(cam_raw)
+
+        # Detect stale camera: if raw reading is unchanged, no new detection
+        cam_is_fresh = (cam_raw[0] != prev_cam_raw[0] or
+                        cam_raw[1] != prev_cam_raw[1] or
+                        cam_raw[5] != prev_cam_raw[5])
+        prev_cam_raw = cam_raw
+
+        # Only use correction if camera saw the marker AND correction is enabled
+        if use_correction and cam_is_fresh:
+            z_t = np.array([cam_world[0], cam_world[1], cam_world[2]])
+        else:
+            z_t = None
 
         # Run EKF for this time step
-        # Pass use_correction=False for Stage 1 (prediction only)
-        # Pass use_correction=True  for Stage 2 (full EKF)
-        extended_kalman_filter.update(u_t, z_t, delta_t, use_correction=use_correction)
+        ekf.update(u_t, z_t, delta_t, use_correction=(z_t is not None))
 
         # Plot
-        kalman_filter_plot.update(extended_kalman_filter.state_mean, extended_kalman_filter.state_covariance[0:2, 0:2])
+        kalman_filter_plot.update(ekf.state_mean, ekf.state_covariance[0:2, 0:2])
 
 
 

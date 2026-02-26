@@ -16,11 +16,34 @@ bufferSize = 1024
 camera_id = 0
 marker_length = 0.10 # we are using 100mm markersize 6x6 ID is zero
 # need to update the camera matrix and dist_coeffs acc to intel realsense 
-camera_matrix = np.array([[1.41089024e+03, 0.00000000e+00 ,5.34757040e+02],      
- [0.00000000e+00 ,1.40977771e+03, 4.63300611e+02],
+camera_matrix = np.array([[644.10406494, 0.00000000e+00 ,641.55847168],      
+ [0.00000000e+00 ,643.3069458, 372.71740723],
  [0.00000000e+00 ,0.00000000e+00 ,1.00000000e+00]], dtype=np.float32)
-dist_coeffs = np.array([-0.32511173, -0.09273864 ,-0.00295959 , 0.00111094 , 0.2446519 ], dtype=np.float32)
+dist_coeffs = np.array([-0.05591936, 0.06711996, 0.00015107, 0.00067795, -0.02167729], dtype=np.float32)
 
+# Camera to world frame transform
+# Measured: robot at world (0,0) gave tx=-1.76, ty=0.42
+#           robot at world (1.2,0) gave tx=-3.16, ty=-0.69
+camera_origin_tx = -1.69        # camera tx when robot at world (0,0)
+camera_origin_ty =  0.39        # camera ty when robot at world (0,0)
+camera_scale     =  0.6485      # average scale from both calibration points
+camera_rotation_matrix = np.array([    # full 2x2 rotation matrix
+    [-0.1176, -1.5289],
+    [ 0.9079, -1.2357]
+])
+
+def camera_to_world(camera_signal):
+    """Transform raw camera signal [tx,ty,tz,rx,ry,rz] to world frame [x, y, theta]."""
+    tx = camera_signal[0]
+    ty = camera_signal[1]
+    rz = camera_signal[5]
+    dx = tx - camera_origin_tx
+    dy = ty - camera_origin_ty
+    R = camera_rotation_matrix
+    x_world = camera_scale * (R[0, 0] * dx + R[0, 1] * dy)
+    y_world = -camera_scale * (R[1, 0] * dx + R[1, 1] * dy)
+    theta_world = rz
+    return [x_world, y_world, theta_world]
 
 # Robot parameters
 num_robot_sensors = 2 # encoder, steering
@@ -35,9 +58,9 @@ data_name_list = ['time', 'control_signal', 'robot_sensor_signal', 'camera_senso
 # Experiment trial parameters
 trial_type = "steering" # "steering" or "distance"
 extra_trial_log_time = 2000 # milliseconds
-trial_max_speed = 40
-trial_time = 5000 # milliseconds
-trial_input = 2 # delta for steering, u_x for distance
+trial_max_speed = 30
+trial_time = 3000 # milliseconds
+trial_input = -10 # delta for steering, u_x for distance
 
 # MM parameters
 counts_to_m = 3518

@@ -96,7 +96,7 @@ class MJPEGStreamHandler(BaseHTTPRequestHandler):
         html = """<!DOCTYPE html>
 <html><head><title>Camera Stream</title></head>
 <body style="background:#111;color:#eee;font-family:monospace;text-align:center">
-  <h2>ROB-GY 6213 — Camera Stream</h2>
+  <h2>ROB-GY 6213 - Camera Stream</h2>
   <img src="/video" style="max-width:90vw;border:2px solid #444;border-radius:8px">
   <p>Stream: <code>http://&lt;this-ip&gt;:{port}/video</code></p>
   <p>Snapshot: <a href="/snapshot" style="color:cyan">/snapshot</a>

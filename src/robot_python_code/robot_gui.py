@@ -889,7 +889,7 @@ def main_page():
                             xytext=(x_est + start_offset * math.cos(theta), y_est + start_offset * math.sin(theta)),
                             arrowprops=dict(arrowstyle='->', color='green', lw=2),zorder=7)
                 # ax.plot(x_cam, y_cam, 'b^', markersize=7, label='Camera', zorder=4)
-                ax.plot(0, 0, 'b>', markersize=7, label='Camera', zorder=4)
+                ax.plot(1.8, 1, 'bv', markersize=7, label='Camera', zorder=4)
                 ax.set_xlabel('X (m)')
                 ax.set_ylabel('Y (m)')
                 ax.set_title('Live EKF')

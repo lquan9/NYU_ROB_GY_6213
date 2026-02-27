@@ -106,7 +106,7 @@ gui
 - Offline localization experiments
 - Online localization experiments
 
-[Lab 03 details](#)
+[Lab 03 details](docs/lab-03.md)
 
 ---
 

@@ -8,6 +8,7 @@ import asyncio
 import math
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.patches import Ellipse
 import cv2
 import numpy as np
 import tempfile
@@ -22,7 +23,7 @@ matplotlib.use('Agg') # Force non-interactive backend
 
 # Global variables
 LOGGING = False
-STREAM_VIDEO = False
+STREAM_VIDEO = True
 ASSETS_DIR = Path(__file__).parent / 'assets'
 
 if not ASSETS_DIR.exists():
@@ -80,7 +81,8 @@ def main_page():
 
     # Set up the video stream, not needed for lab 1
     if STREAM_VIDEO:
-        video_capture = cv2.VideoCapture(1)
+        cam_src = parameters.camera_source if parameters.camera_source is not None else parameters.camera_id
+        video_capture = cv2.VideoCapture(cam_src)
 
     # Enable frame grabs from the video stream.
     @app.get('/video/frame')
@@ -166,28 +168,57 @@ def main_page():
         if not steering_switch.value:
             slider_steering.value = 0
 
-    # def show_lidar_plot():
-    #     """ Visualize the lidar scans"""
-    #     with main_plot:
-    #         fig = main_plot.fig
-    #         fig.patch.set_facecolor('black')
-    #         plt.clf()
-    #         plt.style.use('dark_background')
-    #         plt.tick_params(axis='x', colors='lightgray')
-    #         plt.tick_params(axis='y', colors='lightgray')
+    def show_lidar_plot():
+        """ Visualize the lidar scans"""
+        with main_plot:
+            fig = main_plot.fig
+            fig.patch.set_facecolor('black')
+            plt.clf()
+            plt.style.use('dark_background')
+            plt.tick_params(axis='x', colors='lightgray')
+            plt.tick_params(axis='y', colors='lightgray')
 
-    #         for i in range(num_angles):
-    #             distance = lidar_distance_list[i]
-    #             cos_ang = lidar_cos_angle_list[i]
-    #             sin_ang = lidar_sin_angle_list[i]
-    #             x = [distance * cos_ang, max_lidar_range * cos_ang]
-    #             y = [distance * sin_ang, max_lidar_range * sin_ang]
-    #             plt.plot(x, y, 'r')
-    #         plt.grid(True)
-    #         #plt.axis('equal')
-    #         plt.xlim(-2,2)
-    #         plt.ylim(-2,2)
+            for i in range(num_angles):
+                distance = lidar_distance_list[i]
+                cos_ang = lidar_cos_angle_list[i]
+                sin_ang = lidar_sin_angle_list[i]
+                x = [distance * cos_ang, max_lidar_range * cos_ang]
+                y = [distance * sin_ang, max_lidar_range * sin_ang]
+                plt.plot(x, y, 'r')
+            plt.grid(True)
+            #plt.axis('equal')
+            plt.xlim(-2,2)
+            plt.ylim(-2,2)
 
+    # Visualize the lidar scans
+    def show_localization_plot():
+        with main_plot:
+            fig = main_plot.fig
+            fig.patch.set_facecolor('black')
+            plt.clf()
+            plt.style.use('dark_background')
+            plt.tick_params(axis='x', colors='lightgray')
+            plt.tick_params(axis='y', colors='lightgray')
+            
+            sigma = 3
+            covar_matrix = parameters.covariance_plot_scale * robot.extended_kalman_filter.state_covariance[0:2,0:2]#np.array([[sigma, -sigma*0.9],[ -sigma*0.9, sigma]])
+            x_est = robot.extended_kalman_filter.state_mean[0]
+            y_est = robot.extended_kalman_filter.state_mean[1]
+            lambda_, v = np.linalg.eig(covar_matrix)
+            lambda_ = np.sqrt(lambda_)
+            # lambda_ = np.sqrt(np.abs(lambda_))
+            ell = Ellipse(xy=(x_est, y_est), alpha=0.5, facecolor='red',width=lambda_[0], height=lambda_[1], angle=np.rad2deg(np.arctan2(*v[:,0][::-1])))
+            ax = fig.gca()
+            ax.add_artist(ell)
+
+            plt.plot(x_est, y_est, 'ro')
+
+            plt.grid(True)
+            plot_range = 1
+            plt.xlim(-plot_range, plot_range)
+            plt.ylim(-plot_range, plot_range)
+
+    # Run an experiment trial from a button push
     def run_trial():
         robot_instance.trial_start_time = get_time_in_ms()
         robot_instance.running_trial = True
@@ -285,6 +316,14 @@ def main_page():
         calibration_tab = ui.tab('Calibration')
         plot_tab = ui.tab('Data Plots')
         sim_tab = ui.tab('Simulation')
+        ekf_tab = ui.tab('EKF')
+
+    # EKF tab shared state
+    ekf_tab_state = {
+        'online_trail_x': [],
+        'online_trail_y': [],
+        'offline_running': False,
+    }
 
     with ui.tab_panels(tabs, value=control_tab).classes('w-full'):
         with ui.tab_panel(control_tab):
@@ -616,6 +655,265 @@ def main_page():
 
             ui.button('Save Plot', on_click=save_model_plot, icon='save').props('color=secondary')
 
+        # EKF tab
+        with ui.tab_panel(ekf_tab):
+            with ui.card().classes('w-full'):
+                ui.label('Online EKF — Live Localization').style('font-size: 18px; font-weight: bold;')
+                ui.label('Robot must be connected and camera running.').style('font-size: 12px; color: gray;')
+                ui.button('Clear Trail', icon='clear',
+                          on_click=lambda: (
+                              ekf_tab_state['online_trail_x'].clear(),
+                              ekf_tab_state['online_trail_y'].clear()
+                          )).props('color=warning')
+
+            online_ekf_plot = ui.pyplot(figsize=(12, 5)).classes('w-full h-1/2')
+
+            # OFFLINE — Replay pkl file
+            with ui.card().classes('w-full'):
+                ui.label('Offline EKF — Replay Logged Data').style('font-size: 18px; font-weight: bold;')
+                with ui.row().classes('items-center gap-4 w-full'):
+                    if trial_files:
+                        offline_ekf_selector = ui.select(
+                            options={f: Path(f).name for f in trial_files},
+                            value=trial_files[0],
+                            label='Select a data file'
+                        ).classes('w-96')
+                    else:
+                        ui.label('No trial files found.').style('color: #ff7f7f')
+                        offline_ekf_selector = None
+                    correction_toggle = ui.switch('Use Camera Correction', value=False)
+                with ui.row().classes('items-center gap-4'):
+                    run_offline_button = ui.button('Run Offline EKF', icon='play_arrow').props('color=positive')
+                    offline_status_label = ui.label('Ready.').style('font-size: 13px; color: lightgray;')
+
+            with ui.grid(columns=2).classes('w-full'):
+                offline_traj_plot = ui.pyplot(figsize=(5, 5)).classes('w-full')
+                offline_error_plot = ui.pyplot(figsize=(5, 5)).classes('w-full')
+
+            # Playback state for step-by-step animation
+            playback = {
+                'est_x': [], 'est_y': [], 'est_theta': [],
+                'cam_x': [], 'cam_y': [],
+                'times': [], 'covariances': [],
+                'frame': 0, 'timer': None,
+                'use_correction': False,
+            }
+
+            def draw_frame(frame_idx):
+                state_mean = [
+                    playback['est_x'][frame_idx],
+                    playback['est_y'][frame_idx],
+                    playback['est_theta'][frame_idx],
+                ]
+                covar = playback['covariances'][frame_idx]
+                dir_length = 0.1
+                try:
+                    with offline_traj_plot:
+                        fig = offline_traj_plot.fig
+                        fig.clear()
+                        ax = fig.add_subplot(1, 1, 1)
+                        # Set axis limits first so ellipse clips properly
+                        ax.set_xlim(-2, 5)
+                        ax.set_ylim(-2, 5)
+                        ax.set_aspect('equal', adjustable='box')
+                        # Covariance ellipse - clipped to axes
+                        lambda_, v = np.linalg.eig(covar)
+                        lambda_ = np.sqrt(np.abs(lambda_))
+                        #  lambda_ = np.sqrt(lambda_)
+                        xy = (state_mean[0], state_mean[1])
+                        angle = np.rad2deg(np.arctan2(*v[:, 0][::-1]))
+                        ell = Ellipse(xy, alpha=0.5, facecolor='red',
+                                      width=lambda_[0], height=lambda_[1], angle=angle,
+                                      clip_on=True)
+                        ax.add_artist(ell)
+                        # Trail so far
+                        if frame_idx > 0:
+                            ax.plot(playback['est_x'][:frame_idx+1],
+                                    playback['est_y'][:frame_idx+1], 'r-', linewidth=1, alpha=0.5, label='EKF')
+                            ax.plot(playback['cam_x'][:frame_idx+1],
+                                    playback['cam_y'][:frame_idx+1], 'b-', linewidth=1, alpha=0.5, label='Camera')
+                        # Current dot + heading arrow
+                        ax.plot(state_mean[0], state_mean[1], 'ro', label='_nolegend_')
+                        ax.plot([state_mean[0], state_mean[0] + dir_length * math.cos(state_mean[2])],
+                                [state_mean[1], state_mean[1] + dir_length * math.sin(state_mean[2])], 'r', label='_nolegend_')
+                        ax.set_xlabel('X (m)')
+                        ax.set_ylabel('Y (m)')
+                        ax.set_title('Full EKF' if playback['use_correction'] else 'Prediction Only')
+                        ax.grid(True, alpha=0.3)
+                        ax.legend(loc='upper right', fontsize=8)
+                except Exception as e:
+                    print(f"draw_frame error: {e}")
+
+            def advance_frame():
+                if playback['frame'] >= len(playback['est_x']):
+                    if playback['timer']:
+                        playback['timer'].cancel()
+                        playback['timer'] = None
+                    # Show error plot when done
+                    with offline_error_plot:
+                        fig2 = offline_error_plot.fig
+                        fig2.clear()
+                        error_x     = [e - c for e, c in zip(playback['est_x'], playback['cam_x'])]
+                        error_y     = [e - c for e, c in zip(playback['est_y'], playback['cam_y'])]
+                        error_total = [math.sqrt(ex**2 + ey**2) for ex, ey in zip(error_x, error_y)]
+                        ax1 = fig2.add_subplot(3, 1, 1)
+                        ax1.plot(playback['times'], error_x, 'r-', linewidth=1)
+                        ax1.set_ylabel('X error (m)')
+                        ax1.axhline(0, color='gray', linestyle='--')
+                        ax1.grid(True)
+                        ax2 = fig2.add_subplot(3, 1, 2)
+                        ax2.plot(playback['times'], error_y, 'g-', linewidth=1)
+                        ax2.set_ylabel('Y error (m)')
+                        ax2.axhline(0, color='gray', linestyle='--')
+                        ax2.grid(True)
+                        ax3 = fig2.add_subplot(3, 1, 3)
+                        ax3.plot(playback['times'], error_total, 'b-', linewidth=1)
+                        ax3.set_ylabel('Total error (m)')
+                        ax3.set_xlabel('Time (s)')
+                        ax3.grid(True)
+                        fig2.suptitle('EKF Position Error vs Camera Truth')
+                        fig2.tight_layout()
+                    mean_err = sum(error_total) / len(error_total)
+                    max_err  = max(error_total)
+                    offline_status_label.text = f'Done! Mean: {mean_err:.3f}m | Max: {max_err:.3f}m'
+                    ekf_tab_state['offline_running'] = False
+                    return
+                draw_frame(playback['frame'])
+                playback['frame'] += 1
+
+            def run_offline_ekf():
+                if not offline_ekf_selector or not offline_ekf_selector.value:
+                    ui.notify('Please select a data file first.', type='warning')
+                    return
+                if ekf_tab_state['offline_running']:
+                    ui.notify('Already running, please wait.', type='warning')
+                    return
+                if playback['timer']:
+                    playback['timer'].cancel()
+                    playback['timer'] = None
+
+                use_correction = correction_toggle.value
+                print(f"=== OFFLINE EKF: file={offline_ekf_selector.value}, correction={use_correction} ===")
+                offline_status_label.text = 'Computing EKF...'
+
+                try:
+                    from robot_python_code import extended_kalman_filter as ekf_module
+                    ekf_data = data_handling.get_file_data_for_kf(offline_ekf_selector.value)
+
+                    # Transform initial camera reading to world frame
+                    cam_world_0 = parameters.camera_to_world(ekf_data[0][3])
+                    x_0 = [cam_world_0[0], cam_world_0[1], cam_world_0[2]]
+                    Sigma_0 = np.diag([0.25, 0.25, 0.1])
+                    encoder_counts_0 = ekf_data[0][2].encoder_counts
+                    offline_filter = ekf_module.ExtendedKalmanFilter(x_0, Sigma_0, encoder_counts_0)
+
+                    for key in ['est_x','est_y','est_theta','cam_x','cam_y','times','covariances']:
+                        playback[key].clear()
+                    playback['frame'] = 0
+                    playback['use_correction'] = use_correction
+
+                    # Track previous camera reading to detect stale (no new detection)
+                    prev_cam_raw = ekf_data[0][3]
+
+                    for t in range(1, len(ekf_data)):
+                        row = ekf_data[t]
+                        delta_t = ekf_data[t][0] - ekf_data[t-1][0]
+                        u_t = np.array([row[2].encoder_counts, row[2].steering])
+
+                        # Transform raw camera to world frame
+                        cam_raw = row[3]
+                        cam_world = parameters.camera_to_world(cam_raw)
+
+                        # Detect stale camera: if raw reading unchanged, no new detection
+                        cam_is_fresh = (cam_raw[0] != prev_cam_raw[0] or
+                                        cam_raw[1] != prev_cam_raw[1] or
+                                        cam_raw[5] != prev_cam_raw[5])
+                        prev_cam_raw = cam_raw
+
+                        #  cam_is_fresh = (cam_raw[2] != 0.0)
+
+                        # Only use correction if camera saw marker AND correction enabled
+                        if use_correction and cam_is_fresh:
+                            z_t = np.array([cam_world[0], cam_world[1], cam_world[2]])
+                        else:
+                            z_t = None
+
+                        offline_filter.update(u_t, z_t, delta_t, use_correction=(z_t is not None))
+                        playback['est_x'].append(offline_filter.state_mean[0])
+                        playback['est_y'].append(offline_filter.state_mean[1])
+                        playback['est_theta'].append(offline_filter.state_mean[2])
+                        # Store world-frame camera positions for comparison
+                        playback['cam_x'].append(cam_world[0])
+                        playback['cam_y'].append(cam_world[1])
+                        playback['times'].append(ekf_data[t][0])
+                        playback['covariances'].append(
+                            np.array(offline_filter.state_covariance[0:2, 0:2]).copy())
+
+                    ekf_tab_state['offline_running'] = True
+                    offline_status_label.text = f'Playing {len(playback["est_x"])} frames...'
+                    playback['timer'] = ui.timer(0.01, advance_frame)
+
+                except Exception as e:
+                    import traceback
+                    print(traceback.format_exc())
+                    offline_status_label.text = f'Error: {str(e)}'
+                    ui.notify(f'Error: {str(e)}', type='negative')
+                    ekf_tab_state['offline_running'] = False
+
+            run_offline_button.on_click(run_offline_ekf)
+
+    def update_online_ekf_plot():
+        try:
+            ekf = robot_instance.extended_kalman_filter
+            x_est = ekf.state_mean[0]
+            y_est = ekf.state_mean[1]
+            theta = ekf.state_mean[2]
+            ekf_tab_state['online_trail_x'].append(x_est)
+            ekf_tab_state['online_trail_y'].append(y_est)
+            x_cam = robot_instance.camera_sensor_signal[0]
+            y_cam = robot_instance.camera_sensor_signal[1]
+            with online_ekf_plot:
+                fig = online_ekf_plot.fig
+                fig.patch.set_facecolor('black')
+                plt.clf()
+                plt.style.use('dark_background')
+                ax = fig.gca()
+                if len(ekf_tab_state['online_trail_x']) > 1:
+                    ax.plot(ekf_tab_state['online_trail_x'],
+                            ekf_tab_state['online_trail_y'],
+                            'r-', alpha=0.4, linewidth=1, label='EKF Trail')
+                from matplotlib.patches import Ellipse
+                scale = parameters.covariance_plot_scale
+                covar = scale * np.array(ekf.state_covariance[0:2, 0:2], dtype=float)
+                lam, v = np.linalg.eig(covar)
+                lam = np.sqrt(lam)
+                ang = np.rad2deg(np.arctan2(*v[:, 0][::-1]))
+                ell = Ellipse(xy=(x_est, y_est), width=lam[0], height=lam[1],
+                              angle=ang, alpha=0.3, facecolor='red', edgecolor='red')
+                ax.add_artist(ell)
+                ax.plot(x_est, y_est, 'ro', markersize=8, label='EKF', zorder=6)
+                arrow_len = 0.15
+                start_offset = 0.05
+                ax.annotate('', xy=(x_est + arrow_len * math.cos(theta),
+                                    y_est + arrow_len * math.sin(theta)),
+                            xytext=(x_est + start_offset * math.cos(theta), y_est + start_offset * math.sin(theta)),
+                            arrowprops=dict(arrowstyle='->', color='green', lw=2),zorder=7)
+                # ax.plot(x_cam, y_cam, 'b^', markersize=7, label='Camera', zorder=4)
+                ax.plot(1.3462, 1.651, 'bv', markersize=7, label='Camera', zorder=4)
+                ax.plot(0, 0, 'b*', markersize=5, label='Initial position', zorder=4)
+                ax.set_xlabel('X (m)')
+                ax.set_ylabel('Y (m)')
+                ax.set_title('Live EKF')
+                ax.legend(loc='upper right', fontsize=8)
+                ax.grid(True, alpha=0.3)
+                ax.set_xlim(-1, 5)
+                ax.set_ylim(-2, 2.5)
+                ax.set_xticks(np.arange(-1, 5, 1))
+                ax.set_yticks(np.arange(-2, 2.5, 1))
+                plt.draw()
+        except Exception:
+            pass
+
     # Update slider values, plots, etc. and run robot control loop
     async def control_loop():
         update_connection_to_robot()
@@ -625,6 +923,7 @@ def main_page():
         # update_lidar_data()
         # show_lidar_plot()
         update_video(video_image)
+        update_online_ekf_plot()
 
     ui.timer(0.1, control_loop)
 
@@ -652,3 +951,15 @@ if __name__ in {"__main__", "__mp_main__"}:
            favicon=str(favicon_path) if favicon_path else None)
 
     main()
+
+
+
+
+
+
+
+
+
+
+
+

@@ -17,10 +17,16 @@ def get_file_data(filename):
     time_list = data_dict['time']
     control_signal_list = data_dict['control_signal']
     robot_sensor_signal_list = data_dict['robot_sensor_signal']
+    camera_sensor_signal_list = data_dict['camera_sensor_signal']
+    
     encoder_count_list = []
     velocity_list = []
     steering_angle_list = []
     measured_steering_list = []
+    x_camera_list = []
+    y_camera_list = []
+    z_camera_list = []
+    yaw_camera_list = []
 
     if parameters.DEBUG_PRINTS:
         print(f"Data dict keys: {data_dict.keys()}")
@@ -35,6 +41,11 @@ def get_file_data(filename):
     for row in control_signal_list:
         velocity_list.append(row[0])
         steering_angle_list.append(row[1])
+    for row in camera_sensor_signal_list:
+        x_camera_list.append(row[0])
+        y_camera_list.append(row[1])
+        z_camera_list.append(row[2])
+        yaw_camera_list.append(row[5])
 
     if parameters.DEBUG_PRINTS:
         print(f"Encoder from sensors: {encoder_count_list[:5]} ... {encoder_count_list[-3:]}")
@@ -49,6 +60,26 @@ def get_trial_files(trial_data_dir):
     if not trial_path.exists():
         return []
     return sorted(str(path) for path in trial_path.glob('robot_data_*.pkl'))
+
+# Open a file and return data in a form ready to plot
+def get_file_data_for_kf(filename):
+    data_loader = robot.DataLoader(filename)
+    data_dict = data_loader.load()
+
+    # The dictionary should have keys ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']
+    time_list = data_dict['time']
+    control_signal_list = data_dict['control_signal']
+    robot_sensor_signal_list = data_dict['robot_sensor_signal']
+    camera_sensor_signal_list = data_dict['camera_sensor_signal']
+    
+    # Pack up what is needed for KF
+    t0 = time_list[0]
+    ekf_data = []
+    for i in range(len(time_list)):
+        row = [time_list[i] - t0, control_signal_list[i], robot_sensor_signal_list[i], camera_sensor_signal_list[i]]
+        ekf_data.append(row)
+
+    return ekf_data
 
 def check_trial_has_motion(trial_filename):
     """Check if a trial file has motion data"""
@@ -233,6 +264,21 @@ def run_my_model_to_predict_distance(trial_filename):
 
     return distance
 
+# Calculate the predicted distance from single trial for a motion model
+def run_my_model_to_predict_state(filename):
+    time_list, encoder_count_list, velocity_list, steering_angle_list, x_camera_list, y_camera_list, z_camera_list, yaw_camera_list = get_file_data(filename)
+    motion_model = motion_models.MyMotionModel([0,0,0], 0)
+    x_list, y_list, theta_list, distance_list = motion_model.traj_propagation(time_list, encoder_count_list, steering_angle_list)
+    
+    index_of_end = -30
+    x = x_list[index_of_end]
+    y = y_list[index_of_end]
+    theta = theta_list[index_of_end]
+    distance = distance_list[index_of_end]
+    time_stamp = time_list[index_of_end] - time_list[0]
+    
+    return time_stamp, x, y, theta, distance
+
 def get_diff_squared(m_list,p_list):
     """Calculate the differences between two lists and square them"""
     diff_squared_list = []
@@ -276,6 +322,26 @@ def process_files_and_plot(file_data_list, data_directory):
     # Plot the associated variance
     get_diff_squared(measured_distance_list, predicted_distance_list)
 
+# Open files, plot them to predict with the motion model, and compare with real values
+def process_files_and_plot_curve(files_and_data, directory):
+    predicted_distance_list = []
+    x_measured_list = []
+    y_measured_list = []
+    theta_measured_list = []
+    x_predicted_list = []
+    y_predicted_list = []
+    theta_predicted_list = []
+    w_measured_list = []
+    w_predicted_list = []
+    distance_predicted_list = []
+    for row in files_and_data:
+        filename = row[0]
+        x_measured_distance = row[1]
+        y_measured_distance = row[2]
+        x_measured_list.append(x_measured_distance)
+        y_measured_list.append(y_measured_distance)
+        theta_measured = 2*math.atan2(y_measured_distance, x_measured_distance)
+        theta_measured_list.append(theta_measured)
 
 def sample_model(fig, num_samples=200):
     """Sample and plot some simulated trials"""
@@ -378,6 +444,21 @@ files_and_data = [
     ['robot_data_60_0_28_01_26_13_34_28.pkl', 103/100],
     ]
 
+files_and_data_curve = [
+    ['robot_data_60_10_28_01_26_13_44_28.pkl', 61/100, 31/100],
+    ['robot_data_60_10_28_01_26_13_45_14.pkl', 61/100, 32/100],
+    ['robot_data_60_10_28_01_26_13_45_56.pkl', 61/100, 30/100],
+    ['robot_data_60_10_28_01_26_13_46_26.pkl', 61/100, 31/100],	
+    ['robot_data_60_10_28_01_26_13_47_10.pkl', 62/100, 29/100],
+    ['robot_data_60_10_28_01_26_13_48_25.pkl', 70/100, 106/100],
+    ['robot_data_60_10_28_01_26_13_49_08.pkl', 73/100, 106/100],
+    ['robot_data_60_10_28_01_26_13_50_55.pkl', 73/100, 71/100],
+    ['robot_data_60_10_28_01_26_13_51_34.pkl', 76/100, 69/100],
+    ['robot_data_60_10_28_01_26_13_52_07.pkl', 78/100, 71/100],
+    ['robot_data_60_10_28_01_26_13_52_35.pkl', 76/100, 70/100],
+    ['robot_data_60_10_28_01_26_13_53_08.pkl', 76/100, 71/100],
+]
+
 # Plot the motion model predictions for a single trial
 if False:
     filename = './data_straight/robot_data_60_0_28_01_26_13_36_10.pkl'
@@ -393,6 +474,27 @@ if False:
     directory = ('./data_straight/')    
     process_files_and_plot(files_and_data, directory)
 
+if False:
+    directory = ('./data_curve/')    
+    process_files_and_plot_curve(files_and_data_curve, directory)
+
 # Try to sample with the motion model
 if False:
     sample_model(200)
+
+# Try to load some camera data from a single trial
+if False:
+    filename = './data/robot_data_68_0_06_02_26_17_12_19.pkl'
+    time_list, encoder_count_list, velocity_list, steering_angle_list, x_camera_list, y_camera_list, z_camera_list, yaw_camera_list= get_file_data(filename)
+
+    wheel_radius = 0.034 #cm
+    encoder_counts_per_revolution = 152
+    encoder_counts_to_distance = -2 * math.pi * wheel_radius/ encoder_counts_per_revolution
+
+    plt.plot(time_list, ((np.array(encoder_count_list))-encoder_count_list[0]) * encoder_counts_to_distance + x_list[0], 'k') 
+    #plt.plot(time_list, steering_angle_list, 'r') 
+    plt.plot(time_list, x_list, 'g') 
+    plt.plot(time_list, y_list, 'b') 
+    plt.plot(time_list, z_list, 'c') 
+    plt.legend(['Encoder s','x','y','z'])
+    plt.show()   

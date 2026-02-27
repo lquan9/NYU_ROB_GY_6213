@@ -148,3 +148,17 @@ steering_scale_right = 0.7     # start here, tune up/down until right≈left rad
 #    Kalman filter 
 I3                   = np.eye(3)
 covariance_plot_scale = 100
+
+# TODO:
+# PF parameters, modify the map and num particles as you see fit.
+num_particles = 100
+wall_corner_list = [
+    [0, 0, 2.74, 0], 
+    [0, 0, 0, 3.78], 
+    [0, 3.78, 1.92, 3.78],
+    [1.03, 1.61, 1.03, 2.19],
+    [1.03, 2.19, 1.41, 2.19],
+    [1.92, 3.78, 1.92, 3.32],
+    [1.92, 3.32, 2.74, 3.32],
+    [2.74, 3.32, 2.74, 0]
+    ]

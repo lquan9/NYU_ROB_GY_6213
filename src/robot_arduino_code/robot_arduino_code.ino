@@ -87,20 +87,20 @@ void setup()
   }
   Serial.println("Connected to WiFi");
   printWifiStatus();
-  Serial.println("\nStarting connection to server...");
+  Serial.println("\nStarted connection to server...");
   Udp.begin(localPort);
 
   // Bind the RPLIDAR driver to the arduino hardware serial
-  //Serial2.begin(460800);
-  //lidar.begin(Serial2);
-  //delay(1000);
-  //if (lidar.begin(Serial2)) {
-  //  Serial.println("Started Lidar!");
-  //} else {
-  //  Serial.println("Failed Lidar!");
-  //}
-  //pinMode(RPLidarMotorPin, OUTPUT);
-  //reset_lidar_message();
+  Serial2.begin(460800);
+  lidar.begin(Serial2);
+  delay(1000);
+  if (lidar.begin(Serial2)) {
+    Serial.println("Started Lidar!");
+  } else {
+    Serial.println("Failed Lidar!");
+  }
+  pinMode(RPLidarMotorPin, OUTPUT);
+  reset_lidar_message();
 
   // Set up speed control
 	pinMode(RightMotorDirPin1, OUTPUT); 
@@ -205,7 +205,7 @@ SensorSignal get_sensor_signal(float steering_angle) {
   last_sensor_signal.encoder_count = encoder_count;
 
   // Update the lidar scan
-  //lidar_update();
+  lidar_update();
 
   return last_sensor_signal;
 }

@@ -103,6 +103,26 @@ def normalize_time(time_list):
         return time_normalized
     return time_list
 
+# TODO:
+# Open a file and return data in a form ready to plot
+def get_file_data_for_pf(filename):
+    data_loader = robot_python_code.DataLoader(filename)
+    data_dict = data_loader.load()
+
+    # The dictionary should have keys ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']
+    time_list = data_dict['time']
+    control_signal_list = data_dict['control_signal']
+    robot_sensor_signal_list = data_dict['robot_sensor_signal']
+    
+    # Pack up what is needed for KF
+    t0 = time_list[0]
+    pf_data = []
+    for i in range(len(time_list)):
+        row = [time_list[i] - t0, control_signal_list[i], robot_sensor_signal_list[i]]
+        pf_data.append(row)
+
+    return pf_data
+
 def plot_trial_basics(fig, trial_filename):
     """For a given trial, plot the encoder counts, velocities, steering angles"""
     time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(trial_filename)

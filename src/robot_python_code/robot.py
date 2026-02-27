@@ -5,6 +5,7 @@ from time import strftime
 import socket
 import pickle
 import time
+import math
 import cv2
 import cv2.aruco as aruco
 import numpy as np
@@ -12,7 +13,7 @@ import matplotlib.pyplot as plt
 from time import strftime
 
 # Local libraries
-from . import parameters, extended_kalman_filter
+from . import parameters, extended_kalman_filter, particle_filter
 
 def create_udp_communication(arduinoIP, localIP, arduinoPort, localPort, bufferSize):
     try:
@@ -66,7 +67,9 @@ class DataLogger:
         self.dictionary['state_mean'] = []
         self.dictionary['state_covariance'] = []
 
-    def log(self, logging_switch_on, time, control_signal, robot_sensor_signal, camera_sensor_signal, state_mean=None, state_covariance=None):
+    #TODO: update to make configurable
+    # def log(self, logging_switch_on, time, control_signal, robot_sensor_signal, camera_sensor_signal, state_mean=None, state_covariance=None):
+    def log(self, logging_switch_on, time, control_signal, robot_sensor_signal, state_mean, particle_set):
         if not logging_switch_on:
             if self.currently_logging:
                 self.currently_logging = False
@@ -78,9 +81,11 @@ class DataLogger:
         self.dictionary['time'].append(time)
         self.dictionary['control_signal'].append(control_signal)
         self.dictionary['robot_sensor_signal'].append(robot_sensor_signal)
-        self.dictionary['camera_sensor_signal'].append(camera_sensor_signal)
         self.dictionary['state_mean'].append(state_mean)
-        self.dictionary['state_covariance'].append(state_covariance)
+        # TODO: make configurable
+        # self.dictionary['camera_sensor_signal'].append(camera_sensor_signal)
+        # self.dictionary['state_covariance'].append(state_covariance)
+        self.dictionary['state_covariance'].append(particle_set)
 
         self.line_count += 1
         if self.line_count > parameters.max_num_lines_before_write:
@@ -262,6 +267,8 @@ class Robot:
         self.last_update_time = time.perf_counter()       # for computing actual delta_t
         self.extended_kalman_filter = extended_kalman_filter.ExtendedKalmanFilter(
             x_0=[0, 0, 0], Sigma_0=parameters.I3 * 10e12, encoder_counts_0=0)
+        map = particle_filter.Map(parameters.wall_corner_list)
+        self.particle_filter = particle_filter.ParticleFilter(parameters.num_particles, map, particle_filter.State(0,0,0), particle_filter.State(1,1,1), True, 0)
 
     def create_udp_communication(self, arduinoIP, localIP, arduinoPort, localPort, bufferSize):
         return create_udp_communication(arduinoIP, localIP, arduinoPort, localPort, bufferSize)
@@ -280,18 +287,21 @@ class Robot:
         u_t = np.array([self.robot_sensor_signal.encoder_counts, self.robot_sensor_signal.steering])
         # Only pass camera measurement when a fresh marker was detected this frame
         if self.camera_is_fresh:
-            z_t = np.array([self.camera_pose[0], self.camera_pose[1], self.camera_pose[2]])
+            # z_t = np.array([self.camera_pose[0], self.camera_pose[1], self.camera_pose[2]])
+            z_t = self.robot_sensor_signal        
         else:
             z_t = None  # EKF will run prediction-only
         # Use actual elapsed time instead of hardcoded 0.1
         now = time.perf_counter()
         delta_t = max(0.01, min(0.5, now - self.last_update_time))
         self.last_update_time = now
-        self.extended_kalman_filter.update(u_t, z_t, delta_t)
+        # self.extended_kalman_filter.update(u_t, z_t, delta_t)
+        self.particle_filter.update(u_t, z_t, delta_t)
 
     def control_loop(self, cmd_speed=0, cmd_steering_angle=0, logging_switch_on=False):
         # get raw camera signal in camera frame + whether marker was detected
-        self.camera_sensor_signal, self.camera_is_fresh = self.camera_sensor.get_signal(self.camera_sensor_signal)
+        # TODO: make this configurable
+        # self.camera_sensor_signal, self.camera_is_fresh = self.camera_sensor.get_signal(self.camera_sensor_signal)
 
         # transform to world frame - this is what EKF uses as measurement z_t
         self.camera_pose = parameters.camera_to_world(self.camera_sensor_signal)
@@ -320,12 +330,20 @@ class Robot:
             self.msg_sender.send_control_signal(control_signal)
 
         # log raw camera signal so offline EKF can rerun the transform if needed
-        self.data_logger.log(logging_switch_on, time.perf_counter(), control_signal,
-                             self.robot_sensor_signal, self.camera_sensor_signal,
-                             self.extended_kalman_filter.state_mean,
-                             self.extended_kalman_filter.state_covariance)
+        # self.data_logger.log(logging_switch_on, time.perf_counter(), control_signal,
+        #                      self.robot_sensor_signal, self.camera_sensor_signal,
+        #                      self.extended_kalman_filter.state_mean,
+        #                      self.extended_kalman_filter.state_covariance)
+        # TODO: make configurable
+        self.data_logger.log(logging_switch_on, time.perf_counter(), control_signal, 
+                             self.robot_sensor_signal, 
+                             self.particle_filter.particle_set.mean_state, self.particle_filter.particle_set)
 
-
-
-
-
+    # TODO:
+    # Put lidar angles in the correct units and correct direction.
+    def convert_hardware_angle(self, angle):
+        return -angle * math.pi / 180 # degrees to rad
+    
+    # Put lidar distances in the correct units.
+    def convert_hardware_distance(self, distance):
+        return distance / 1000 # mm to m

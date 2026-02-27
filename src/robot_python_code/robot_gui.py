@@ -920,8 +920,9 @@ def main_page():
         cmd_speed, cmd_steering_angle = update_commands()
         robot_instance.control_loop(cmd_speed, cmd_steering_angle, logging_switch.value)
         encoder_count_label.set_text(robot_instance.robot_sensor_signal.encoder_counts)
-        # update_lidar_data()
-        # show_lidar_plot()
+        #TODO: show on main page, video left, lidar right
+        update_lidar_data()
+        show_lidar_plot()
         update_video(video_image)
         update_online_ekf_plot()
 

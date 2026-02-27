@@ -118,7 +118,7 @@ gui
 - Offline localization experiments
 - Online localization experiments
 
-[Lab 04 details](#)
+[Lab 04 details](docs/lab-04.md)
 
 ---
 

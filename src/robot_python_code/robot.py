@@ -214,6 +214,12 @@ class RobotSensorSignal:
             sensor_data_list.append(self.distances[i])
         return sensor_data_list
 
+    # def convert_hardware_angle(self, angle):                       # TODO: have to update
+    #     return -angle * math.pi / 180
+
+    # def convert_hardware_distance(self, distance):               # TODO: have to updatre
+    #     return distance / 1000
+
 
 class MsgReceiver:
     delta_receive_time = 0.05

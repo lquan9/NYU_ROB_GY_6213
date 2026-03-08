@@ -215,7 +215,8 @@ class ParticleFilter:
     # Update the states given new measurements
     def update(self, odometery_signal, measurement_signal, delta_t):
         self.prediction(odometery_signal, delta_t)
-        if len(measurement_signal.angles)>0:
+        # if len(measurement_signal.angles)>0:
+        if measurement_signal is not None and len(measurement_signal.angles) > 0:
             self.correction(measurement_signal)
         self.particle_set.update_mean_state()
         self.state_estimate_list.append(self.state_estimate.deepcopy())

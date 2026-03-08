@@ -106,7 +106,7 @@ def normalize_time(time_list):
 # TODO:
 # Open a file and return data in a form ready to plot
 def get_file_data_for_pf(filename):
-    data_loader = robot_python_code.DataLoader(filename)
+    data_loader = robot.DataLoader(filename)
     data_dict = data_loader.load()
 
     # The dictionary should have keys ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']
@@ -371,7 +371,8 @@ def sample_model(fig, num_samples=200):
     ax = fig.add_subplot(1, 1, 1)
     traj_duration = 10
     for i in range(num_samples):
-        model = motion_models.AckermannMM([0,0,0], 0)
+        # model = motion_models.AckermannMM([0,0,0], 0)
+        model = motion_models.AckermannMM([0,0,0], None, 0)
         traj_x, traj_y, _ = model.generate_simulated_traj(traj_duration)
         ax.plot(traj_x, traj_y, 'k.', markersize=1)
 

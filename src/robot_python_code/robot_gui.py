@@ -201,9 +201,12 @@ def main_page():
             plt.tick_params(axis='y', colors='lightgray')
             
             sigma = 3
-            covar_matrix = parameters.covariance_plot_scale * robot.extended_kalman_filter.state_covariance[0:2,0:2]#np.array([[sigma, -sigma*0.9],[ -sigma*0.9, sigma]])
-            x_est = robot.extended_kalman_filter.state_mean[0]
-            y_est = robot.extended_kalman_filter.state_mean[1]
+            # covar_matrix = parameters.covariance_plot_scale * robot.extended_kalman_filter.state_covariance[0:2,0:2]#np.array([[sigma, -sigma*0.9],[ -sigma*0.9, sigma]])
+            # x_est = robot.extended_kalman_filter.state_mean[0]
+            # y_est = robot.extended_kalman_filter.state_mean[1]
+            covar_matrix = parameters.covariance_plot_scale * robot_instance.extended_kalman_filter.state_covariance[0:2,0:2]
+            x_est = robot_instance.extended_kalman_filter.state_mean[0]
+            y_est = robot_instance.extended_kalman_filter.state_mean[1]
             lambda_, v = np.linalg.eig(covar_matrix)
             lambda_ = np.sqrt(lambda_)
             # lambda_ = np.sqrt(np.abs(lambda_))
@@ -230,7 +233,7 @@ def main_page():
             slider_steering.value = parameters.trial_input
         elif parameters.trial_type == "distance":
             slider_steering.value = 0
-            if math.abs(parameters.trial_input) < parameters.trial_max_speed:
+            if abs(parameters.trial_input) < parameters.trial_max_speed:
                 slider_speed.value = parameters.trial_input
             else:
                 slider_speed.value = parameters.trial_max_speed

@@ -4,14 +4,14 @@ from pathlib import Path
 import math
 import numpy as np
 
-# ── Network ───────────────────────────────────────────────────────
+#  Network
 localIP     = "192.168.0.196"
 arduinoIP   = "192.168.0.198"
 localPort   = 4010
 arduinoPort = 4010
 bufferSize  = 1024
 
-# ── Camera ────────────────────────────────────────────────────────
+# Camera 
 camera_id     = 0
 camera_source = None   # set to MJPEG URL string if using a network cam
 marker_length = 0.15   # 150mm marker, 6x6 ArUco, ID 0
@@ -42,73 +42,73 @@ def camera_to_world(camera_signal):
     return [float(world_xy[0]), float(world_xy[1]), rz + camera_theta_offset]
 
 
-def calibrate_camera_transform(world_0, cam_0, world_1, cam_1, world_2, cam_2):
-    """Compute camera_A, camera_b, and camera_theta_offset from THREE calibration points.
+# def calibrate_camera_transform(world_0, cam_0, world_1, cam_1, world_2, cam_2):
+#     """Compute camera_A, camera_b, and camera_theta_offset from THREE calibration points.
 
-    Using 3 points solves the full affine transform — no manual axis negation needed.
-    Choose points with BOTH x and y displacement, e.g.:
-        point 0: (0, 0)
-        point 1: (0.5, 0)    ← x displacement
-        point 2: (0, 0.5)    ← y displacement
+#     Using 3 points solves the full affine transform — no manual axis negation needed.
+#     Choose points with BOTH x and y displacement, e.g.:
+#         point 0: (0, 0)
+#         point 1: (0.5, 0)    ← x displacement
+#         point 2: (0, 0.5)    ← y displacement
 
-    Args:
-        world_N: [x, y]       known world position
-        cam_N:   [tx, ty, rz] camera raw reading (divide "Camera raw" by 100)
+#     Args:
+#         world_N: [x, y]       known world position
+#         cam_N:   [tx, ty, rz] camera raw reading (divide "Camera raw" by 100)
 
-    Example:
-        >>> from robot_python_code import parameters
-        >>> parameters.calibrate_camera_transform(
-        ...     [0, 0],     [tx0, ty0, rz0],
-        ...     [0.5, 0],   [tx1, ty1, rz1],
-        ...     [0, 0.5],   [tx2, ty2, rz2])
-    """
-    w0 = np.array(world_0, float)
-    w1 = np.array(world_1, float)
-    w2 = np.array(world_2, float)
-    c0 = np.array(cam_0[:2], float)
-    c1 = np.array(cam_1[:2], float)
-    c2 = np.array(cam_2[:2], float)
+#     Example:
+#         >>> from robot_python_code import parameters
+#         >>> parameters.calibrate_camera_transform(
+#         ...     [0, 0],     [tx0, ty0, rz0],
+#         ...     [0.5, 0],   [tx1, ty1, rz1],
+#         ...     [0, 0.5],   [tx2, ty2, rz2])
+#     """
+#     w0 = np.array(world_0, float)
+#     w1 = np.array(world_1, float)
+#     w2 = np.array(world_2, float)
+#     c0 = np.array(cam_0[:2], float)
+#     c1 = np.array(cam_1[:2], float)
+#     c2 = np.array(cam_2[:2], float)
 
-    # Displacements from point 0
-    dc1, dc2 = c1 - c0, c2 - c0
-    dw1, dw2 = w1 - w0, w2 - w0
+#     # Displacements from point 0
+#     dc1, dc2 = c1 - c0, c2 - c0
+#     dw1, dw2 = w1 - w0, w2 - w0
 
-    # Solve A @ [dc1 | dc2] = [dw1 | dw2]  →  A = W @ C^-1
-    C = np.column_stack([dc1, dc2])  # 2x2
-    W = np.column_stack([dw1, dw2])  # 2x2
+#     # Solve A @ [dc1 | dc2] = [dw1 | dw2]  →  A = W @ C^-1
+#     C = np.column_stack([dc1, dc2])  # 2x2
+#     W = np.column_stack([dw1, dw2])  # 2x2
 
-    if abs(np.linalg.det(C)) < 1e-10:
-        print("ERROR: calibration points are collinear in camera frame.")
-        print("Use 3 points with BOTH x and y displacement.")
-        return
-    A = W @ np.linalg.inv(C)
-    b = w0 - A @ c0
+#     if abs(np.linalg.det(C)) < 1e-10:
+#         print("ERROR: calibration points are collinear in camera frame.")
+#         print("Use 3 points with BOTH x and y displacement.")
+#         return
+#     A = W @ np.linalg.inv(C)
+#     b = w0 - A @ c0
 
-    # Theta offset: average of (actual_heading - camera_rz) at all points
-    # Uses the 0-heading point (point 0) if all 3 have same heading
-    theta_off = -cam_0[2] if len(cam_0) > 2 else 0.0
+#     # Theta offset: average of (actual_heading - camera_rz) at all points
+#     # Uses the 0-heading point (point 0) if all 3 have same heading
+#     theta_off = -cam_0[2] if len(cam_0) > 2 else 0.0
 
-    # Verify all 3 points
-    preds = [A @ c + b for c in [c0, c1, c2]]
-    worlds = [w0, w1, w2]
-    errs = [np.linalg.norm(p - w) for p, w in zip(preds, worlds)]
+#     # Verify all 3 points
+#     preds = [A @ c + b for c in [c0, c1, c2]]
+#     worlds = [w0, w1, w2]
+#     errs = [np.linalg.norm(p - w) for p, w in zip(preds, worlds)]
 
-    det = np.linalg.det(A)
-    print("=" * 55)
-    print("   Camera Calibration Results (3-point)")
-    print("=" * 55)
-    print(f"camera_A = np.array([[{A[0,0]:.6f}, {A[0,1]:.6f}],")
-    print(f"                     [{A[1,0]:.6f}, {A[1,1]:.6f}]])")
-    print(f"camera_b = np.array([{b[0]:.6f}, {b[1]:.6f}])")
-    print(f"camera_theta_offset = {theta_off:.6f}")
-    print()
-    print(f"det(A) = {det:.4f}  ({'reflection' if det < 0 else 'rotation'}+scale)")
-    print()
-    for i, (c, p, w, e) in enumerate(zip([c0,c1,c2], preds, worlds, errs)):
-        print(f"Point {i}: cam {tuple(c.round(3))} → world {tuple(p.round(3))}  "
-              f"(target {tuple(w)})  err={e:.4f}m")
+#     det = np.linalg.det(A)
+#     print("=" * 55)
+#     print("   Camera Calibration Results (3-point)")
+#     print("=" * 55)
+#     print(f"camera_A = np.array([[{A[0,0]:.6f}, {A[0,1]:.6f}],")
+#     print(f"                     [{A[1,0]:.6f}, {A[1,1]:.6f}]])")
+#     print(f"camera_b = np.array([{b[0]:.6f}, {b[1]:.6f}])")
+#     print(f"camera_theta_offset = {theta_off:.6f}")
+#     print()
+#     print(f"det(A) = {det:.4f}  ({'reflection' if det < 0 else 'rotation'}+scale)")
+#     print()
+#     for i, (c, p, w, e) in enumerate(zip([c0,c1,c2], preds, worlds, errs)):
+#         print(f"Point {i}: cam {tuple(c.round(3))} → world {tuple(p.round(3))}  "
+#               f"(target {tuple(w)})  err={e:.4f}m")
 
-    return A, b, theta_off
+#     return A, b, theta_off
 
 
 #    Robot I/O 

@@ -196,6 +196,12 @@ class RobotSensorSignal:
             self.angles.append(unpacked_msg[index])
             self.distances.append(unpacked_msg[index + 1])
 
+    def convert_hardware_angle(self, angle):
+        return -angle * math.pi / 180
+
+    def convert_hardware_distance(self, distance):
+        return distance / 1000
+
     def print(self):
         print("Robot Sensor Signal")
         print(" encoder: ", self.encoder_counts)
@@ -291,17 +297,14 @@ class Robot:
 
     def update_state_estimate(self):
         u_t = np.array([self.robot_sensor_signal.encoder_counts, self.robot_sensor_signal.steering])
-        # Only pass camera measurement when a fresh marker was detected this frame
-        if self.camera_is_fresh:
-            # z_t = np.array([self.camera_pose[0], self.camera_pose[1], self.camera_pose[2]])
-            z_t = self.robot_sensor_signal        
+        # pass lidar signal whenever rays are available, not tied to camera
+        if self.robot_sensor_signal.num_lidar_rays > 0:
+            z_t = self.robot_sensor_signal
         else:
-            z_t = None  # EKF will run prediction-only
-        # Use actual elapsed time instead of hardcoded 0.1
+            z_t = None
         now = time.perf_counter()
         delta_t = max(0.01, min(0.5, now - self.last_update_time))
         self.last_update_time = now
-        # self.extended_kalman_filter.update(u_t, z_t, delta_t)
         self.particle_filter.update(u_t, z_t, delta_t)
 
     def control_loop(self, cmd_speed=0, cmd_steering_angle=0, logging_switch_on=False):

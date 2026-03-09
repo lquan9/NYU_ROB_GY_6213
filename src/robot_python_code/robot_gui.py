@@ -84,6 +84,9 @@ def main_page():
         cam_src = parameters.camera_source if parameters.camera_source is not None else parameters.camera_id
         video_capture = cv2.VideoCapture(cam_src)
 
+    placeholder = Response(content=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9',
+                           media_type='image/jpeg')
+
     # Enable frame grabs from the video stream.
     @app.get('/video/frame')
     async def grab_video_frame() -> Response:
@@ -170,6 +173,10 @@ def main_page():
 
     def show_lidar_plot():
         """ Visualize the lidar scans"""
+        try:
+            main_plot
+        except NameError:
+            return
         with main_plot:
             fig = main_plot.fig
             fig.patch.set_facecolor('black')
@@ -192,6 +199,10 @@ def main_page():
 
     # Visualize the lidar scans
     def show_localization_plot():
+        try:
+            main_plot
+        except NameError:
+            return
         with main_plot:
             fig = main_plot.fig
             fig.patch.set_facecolor('black')
@@ -320,9 +331,16 @@ def main_page():
         plot_tab = ui.tab('Data Plots')
         sim_tab = ui.tab('Simulation')
         ekf_tab = ui.tab('EKF')
+        pf_tab = ui.tab('PF')
 
     # EKF tab shared state
     ekf_tab_state = {
+        'online_trail_x': [],
+        'online_trail_y': [],
+        'offline_running': False,
+    }
+
+    pf_tab_state = {
         'online_trail_x': [],
         'online_trail_y': [],
         'offline_running': False,
@@ -865,6 +883,211 @@ def main_page():
 
             run_offline_button.on_click(run_offline_ekf)
 
+        with ui.tab_panel(pf_tab):
+            with ui.card().classes('w-full'):
+                ui.label('Online PF').style('font-size: 18px; font-weight: bold;')
+                ui.button('Clear Trail', icon='clear',
+                          on_click=lambda: (
+                              pf_tab_state['online_trail_x'].clear(),
+                              pf_tab_state['online_trail_y'].clear()
+                          )).props('color=warning')
+
+            online_pf_plot = ui.pyplot(figsize=(7, 6)).classes('w-full')
+
+            with ui.card().classes('w-full'):
+                ui.label('Offline PF').style('font-size: 18px; font-weight: bold;')
+                with ui.row().classes('items-center gap-4 w-full'):
+                    if trial_files:
+                        offline_pf_selector = ui.select(
+                            options={f: Path(f).name for f in trial_files},
+                            value=trial_files[0],
+                            label='Select a data file'
+                        ).classes('w-96')
+                    else:
+                        offline_pf_selector = None
+                        ui.label('No trial files found.').style('color: #ff7f7f')
+                    pf_correction_toggle = ui.switch('Use Lidar Correction', value=True)
+                with ui.row().classes('items-center gap-4'):
+                    run_offline_pf_button = ui.button('Run Offline PF', icon='play_arrow').props('color=positive')
+                    offline_pf_status_label = ui.label('Ready.').style('font-size: 13px; color: lightgray;')
+
+            offline_pf_traj_plot = ui.pyplot(figsize=(7, 6)).classes('w-full')
+
+            pf_playback = {
+                'est_x': [], 'est_y': [], 'est_theta': [],
+                'particles_x': [], 'particles_y': [],
+                'frame': 0, 'timer': None,
+                'use_correction': True,
+            }
+
+            def draw_pf_frame(frame_idx):
+                try:
+                    state_x = pf_playback['est_x'][frame_idx]
+                    state_y = pf_playback['est_y'][frame_idx]
+                    state_theta = pf_playback['est_theta'][frame_idx]
+                    px = pf_playback['particles_x'][frame_idx]
+                    py = pf_playback['particles_y'][frame_idx]
+                    with offline_pf_traj_plot:
+                        fig = offline_pf_traj_plot.fig
+                        fig.clear()
+                        ax = fig.add_subplot(1, 1, 1)
+                        ax.set_facecolor('black')
+                        fig.patch.set_facecolor('black')
+                        from robot_python_code import particle_filter as pf_module
+                        pf_map = pf_module.Map(parameters.wall_corner_list)
+                        for wall in pf_map.wall_list:
+                            ax.plot([wall.corner1.x, wall.corner2.x],
+                                    [wall.corner1.y, wall.corner2.y], 'w-', linewidth=1.5)
+                        ax.plot(px, py, 'g.', markersize=3, alpha=0.5, label='Particles')
+                        if frame_idx > 0:
+                            ax.plot(pf_playback['est_x'][:frame_idx + 1],
+                                    pf_playback['est_y'][:frame_idx + 1],
+                                    'r-', linewidth=1, alpha=0.5, label='PF Trail')
+                        ax.plot(state_x, state_y, 'ro', markersize=8, zorder=6)
+                        ax.annotate('',
+                                    xy=(state_x + 0.15 * math.cos(state_theta),
+                                        state_y + 0.15 * math.sin(state_theta)),
+                                    xytext=(state_x, state_y),
+                                    arrowprops=dict(arrowstyle='->', color='green', lw=2), zorder=7)
+                        ax.set_xlim(pf_map.plot_range[0], pf_map.plot_range[1])
+                        ax.set_ylim(pf_map.plot_range[2], pf_map.plot_range[3])
+                        ax.set_xlabel('X (m)', color='white')
+                        ax.set_ylabel('Y (m)', color='white')
+                        title = 'Prediction Only' if not pf_playback['use_correction'] else 'Full PF'
+                        ax.set_title(title, color='white')
+                        ax.tick_params(colors='white')
+                        ax.grid(True, alpha=0.3)
+                        ax.legend(loc='upper right', fontsize=8, facecolor='black', labelcolor='white')
+                except Exception as e:
+                    print(f"draw_pf_frame error: {e}")
+
+            def advance_pf_frame():
+                if pf_playback['frame'] >= len(pf_playback['est_x']):
+                    if pf_playback['timer']:
+                        pf_playback['timer'].cancel()
+                        pf_playback['timer'] = None
+                    pf_tab_state['offline_running'] = False
+                    offline_pf_status_label.text = f"Done. {len(pf_playback['est_x'])} frames."
+                    return
+                draw_pf_frame(pf_playback['frame'])
+                pf_playback['frame'] += 1
+
+            # compute_pf runs in a separate thread so the event loop stays free
+            def compute_pf_sync(filename, use_correction):
+                from robot_python_code import particle_filter as pf_module
+                pf_data = data_handling.get_file_data_for_pf(filename)
+                pf_map = pf_module.Map(parameters.wall_corner_list)
+                encoder_counts_0 = pf_data[0][2].encoder_counts
+                offline_filter = pf_module.ParticleFilter(
+                    parameters.num_particles, pf_map,
+                    initial_state=pf_module.State(0.5, 2.0, 1.57),
+                    state_stdev=pf_module.State(0.1, 0.1, 0.1),
+                    known_start_state=True,
+                    encoder_counts_0=encoder_counts_0
+                )
+                frames = {'est_x': [], 'est_y': [], 'est_theta': [], 'particles_x': [], 'particles_y': []}
+                for t in range(1, len(pf_data)):
+                    delta_t = pf_data[t][0] - pf_data[t - 1][0]
+                    u_t = np.array([pf_data[t][2].encoder_counts, pf_data[t][2].steering])
+                    z_t = pf_data[t][2] if use_correction else None
+                    offline_filter.update(u_t, z_t, delta_t)
+                    mean = offline_filter.particle_set.mean_state
+                    frames['est_x'].append(mean.x)
+                    frames['est_y'].append(mean.y)
+                    frames['est_theta'].append(mean.theta)
+                    frames['particles_x'].append([p.state.x for p in offline_filter.particle_set.particle_list])
+                    frames['particles_y'].append([p.state.y for p in offline_filter.particle_set.particle_list])
+                return frames
+
+            async def run_offline_pf():
+                if not offline_pf_selector or not offline_pf_selector.value:
+                    ui.notify('Please select a data file first.', type='warning')
+                    return
+                if pf_tab_state['offline_running']:
+                    ui.notify('Already running.', type='warning')
+                    return
+                if pf_playback['timer']:
+                    pf_playback['timer'].cancel()
+                    pf_playback['timer'] = None
+
+                use_correction = pf_correction_toggle.value
+                filename = offline_pf_selector.value
+                offline_pf_status_label.text = 'Computing PF... this may take a moment.'
+                run_offline_pf_button.props('disable')
+                print(f"=== OFFLINE PF: file={filename}, correction={use_correction} ===")
+
+                try:
+                    import asyncio
+                    from concurrent.futures import ThreadPoolExecutor
+                    loop = asyncio.get_event_loop()
+                    with ThreadPoolExecutor(max_workers=1) as pool:
+                        frames = await loop.run_in_executor(
+                            pool, compute_pf_sync, filename, use_correction
+                        )
+
+                    for key in ['est_x', 'est_y', 'est_theta', 'particles_x', 'particles_y']:
+                        pf_playback[key].clear()
+                        pf_playback[key].extend(frames[key])
+                    pf_playback['frame'] = 0
+                    pf_playback['use_correction'] = use_correction
+                    pf_tab_state['offline_running'] = True
+                    offline_pf_status_label.text = f"Playing {len(pf_playback['est_x'])} frames..."
+                    pf_playback['timer'] = ui.timer(0.05, advance_pf_frame)
+
+                except Exception as e:
+                    import traceback
+                    print(traceback.format_exc())
+                    offline_pf_status_label.text = f'Error: {str(e)}'
+                    ui.notify(f'Error: {str(e)}', type='negative')
+                    pf_tab_state['offline_running'] = False
+                finally:
+                    run_offline_pf_button.props(remove='disable')
+
+            run_offline_pf_button.on_click(run_offline_pf)
+
+    def update_online_pf_plot():
+        try:
+            pf = robot_instance.particle_filter
+            mean = pf.particle_set.mean_state
+            x_est = mean.x
+            y_est = mean.y
+            theta = mean.theta
+            pf_tab_state['online_trail_x'].append(x_est)
+            pf_tab_state['online_trail_y'].append(y_est)
+            with online_pf_plot:
+                fig = online_pf_plot.fig
+                fig.patch.set_facecolor('black')
+                plt.clf()
+                plt.style.use('dark_background')
+                ax = fig.gca()
+                from robot_python_code import particle_filter as pf_module
+                pf_map = pf_module.Map(parameters.wall_corner_list)
+                for wall in pf_map.wall_list:
+                    ax.plot([wall.corner1.x, wall.corner2.x],
+                            [wall.corner1.y, wall.corner2.y], 'w-', linewidth=1.5)
+                px = [p.state.x for p in pf.particle_set.particle_list]
+                py = [p.state.y for p in pf.particle_set.particle_list]
+                ax.plot(px, py, 'g.', markersize=3, alpha=0.5, label='Particles')
+                if len(pf_tab_state['online_trail_x']) > 1:
+                    ax.plot(pf_tab_state['online_trail_x'],
+                            pf_tab_state['online_trail_y'],
+                            'r-', alpha=0.4, linewidth=1, label='PF Trail')
+                ax.plot(x_est, y_est, 'ro', markersize=8, label='PF Mean', zorder=6)
+                ax.annotate('',
+                            xy=(x_est + 0.15 * math.cos(theta), y_est + 0.15 * math.sin(theta)),
+                            xytext=(x_est, y_est),
+                            arrowprops=dict(arrowstyle='->', color='green', lw=2), zorder=7)
+                ax.set_xlim(pf_map.plot_range[0], pf_map.plot_range[1])
+                ax.set_ylim(pf_map.plot_range[2], pf_map.plot_range[3])
+                ax.set_xlabel('X (m)')
+                ax.set_ylabel('Y (m)')
+                ax.set_title('Live PF')
+                ax.legend(loc='upper right', fontsize=8)
+                ax.grid(True, alpha=0.3)
+                plt.draw()
+        except Exception:
+            pass
+
     def update_online_ekf_plot():
         try:
             ekf = robot_instance.extended_kalman_filter
@@ -928,6 +1151,7 @@ def main_page():
         show_lidar_plot()
         update_video(video_image)
         update_online_ekf_plot()
+        update_online_pf_plot()
 
     ui.timer(0.1, control_loop)
 
@@ -955,15 +1179,3 @@ if __name__ in {"__main__", "__mp_main__"}:
            favicon=str(favicon_path) if favicon_path else None)
 
     main()
-
-
-
-
-
-
-
-
-
-
-
-

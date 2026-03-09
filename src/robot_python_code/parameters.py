@@ -151,8 +151,10 @@ covariance_plot_scale = 100
 
 # TODO:
 # PF parameters, modify the map and num particles as you see fit.
-distance_variance = 0.03 #redundent number for now 
 num_particles = 100
+# lidar measurement noise variance in meters squared
+#not tuned yet
+distance_variance = 0.03
 wall_corner_list = [
     [0, 0, 2.74, 0], 
     [0, 0, 0, 3.78], 

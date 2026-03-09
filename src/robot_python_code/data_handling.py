@@ -1,6 +1,8 @@
 """Data handling"""
 # External Libraries
 import math
+import pickle
+import sys
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,49 +10,63 @@ import matplotlib.pyplot as plt
 # Local libraries
 from robot_python_code import motion_models, robot, parameters
 
+
+# old pkl files saved ParticleSet/State objects under module name 'particle_filter'
+# now it lives at robot_python_code.particle_filter
+# this remapper lets pickle reconstruct those classes when loading old files
+class _PickleModuleRemapper:
+    def find_module(self, fullname, path=None):
+        if fullname == 'particle_filter':
+            return self
+        return None
+
+    def load_module(self, fullname):
+        if fullname in sys.modules:
+            return sys.modules[fullname]
+        from robot_python_code import particle_filter
+        sys.modules[fullname] = particle_filter
+        return particle_filter
+
+_remapper = _PickleModuleRemapper()
+
+
+def _safe_load_pickle(filename):
+    # install remapper before load so pickle can find particle_filter classes
+    sys.meta_path.insert(0, _remapper)
+    try:
+        data_loader = robot.DataLoader(filename)
+        data_dict = data_loader.load()
+    finally:
+        if _remapper in sys.meta_path:
+            sys.meta_path.remove(_remapper)
+    return data_dict
+
+
 def get_file_data(filename):
-    """ Open a file and return data in a form ready to plot"""
-    data_loader = robot.DataLoader(filename)
-    data_dict = data_loader.load()
+    data_dict = _safe_load_pickle(filename)
 
     # The dictionary should have keys ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']
     time_list = data_dict['time']
     control_signal_list = data_dict['control_signal']
     robot_sensor_signal_list = data_dict['robot_sensor_signal']
-    camera_sensor_signal_list = data_dict['camera_sensor_signal']
-    
+
     encoder_count_list = []
     velocity_list = []
     steering_angle_list = []
-    measured_steering_list = []
-    x_camera_list = []
-    y_camera_list = []
-    z_camera_list = []
-    yaw_camera_list = []
 
     if parameters.DEBUG_PRINTS:
         print(f"Data dict keys: {data_dict.keys()}")
         print(f"Number of sensor signals: {len(robot_sensor_signal_list)}")
-        print(f"First sensor signal type: {type(robot_sensor_signal_list[0])}")
-        if hasattr(robot_sensor_signal_list[0], '__dict__'):
-            print(f"First sensor signal attributes: {robot_sensor_signal_list[0].__dict__}")
 
     for row in robot_sensor_signal_list:
         encoder_count_list.append(row.encoder_counts)
-        measured_steering_list.append(row.steering)
     for row in control_signal_list:
         velocity_list.append(row[0])
         steering_angle_list.append(row[1])
-    for row in camera_sensor_signal_list:
-        x_camera_list.append(row[0])
-        y_camera_list.append(row[1])
-        z_camera_list.append(row[2])
-        yaw_camera_list.append(row[5])
 
     if parameters.DEBUG_PRINTS:
         print(f"Encoder from sensors: {encoder_count_list[:5]} ... {encoder_count_list[-3:]}")
-        print(f"Measured steering from sensors: {measured_steering_list[:5]} ... {measured_steering_list[-3:]}")
-        print(f"Commanded steering from controls: {steering_angle_list[:5]} ... {steering_angle_list[-3:]}")
+        print(f"Commanded steering: {steering_angle_list[:5]} ... {steering_angle_list[-3:]}")
 
     return time_list, encoder_count_list, velocity_list, steering_angle_list
 
@@ -63,8 +79,7 @@ def get_trial_files(trial_data_dir):
 
 # Open a file and return data in a form ready to plot
 def get_file_data_for_kf(filename):
-    data_loader = robot.DataLoader(filename)
-    data_dict = data_loader.load()
+    data_dict = _safe_load_pickle(filename)
 
     # The dictionary should have keys ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']
     time_list = data_dict['time']
@@ -106,8 +121,7 @@ def normalize_time(time_list):
 # TODO:
 # Open a file and return data in a form ready to plot
 def get_file_data_for_pf(filename):
-    data_loader = robot.DataLoader(filename)
-    data_dict = data_loader.load()
+    data_dict = _safe_load_pickle(filename)
 
     # The dictionary should have keys ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']
     time_list = data_dict['time']
@@ -518,4 +532,4 @@ if False:
     plt.plot(time_list, y_list, 'b') 
     plt.plot(time_list, z_list, 'c') 
     plt.legend(['Encoder s','x','y','z'])
-    plt.show()   
+    plt.show()

@@ -5,7 +5,7 @@ import math
 import numpy as np
 
 # ── Network ───────────────────────────────────────────────────────
-localIP     = "192.168.0.196"
+localIP     = "192.168.0.195"
 arduinoIP   = "192.168.0.198"
 localPort   = 4010
 arduinoPort = 4010

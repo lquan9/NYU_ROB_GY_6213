@@ -23,7 +23,7 @@ matplotlib.use('Agg') # Force non-interactive backend
 
 # Global variables
 LOGGING = False
-STREAM_VIDEO = True
+STREAM_VIDEO = False
 ASSETS_DIR = Path(__file__).parent / 'assets'
 
 if not ASSETS_DIR.exists():

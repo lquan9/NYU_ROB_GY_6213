@@ -235,6 +235,10 @@ class KalmanFilterPlot:
         ell = Ellipse(xy, alpha=0.5, facecolor='red',width=lambda_[0], height=lambda_[1], angle = angle)
         ax = self.fig.gca()
         ax.add_artist(ell)
+
+        # Plot marker
+        plt.plot(0, 0,'b*',label='origin')
+
         
         # Plot state estimate
         plt.plot(state_mean[0], state_mean[1],'ro')
@@ -244,6 +248,7 @@ class KalmanFilterPlot:
         # plt.axis([-4, 12, -6, 6])
         plt.axis([-2,4,-2,2])
         plt.grid()
+        plt.legend()
         plt.draw()
         plt.pause(0.1)
 
@@ -254,7 +259,7 @@ def offline_efk(use_correction=True):
     # Get data to filter
     plt.ion()
     # filename = './data/data_straight/btf/robot_data_40_15_10_02_26_23_13_58.pkl'
-    filename = '/Users/jotheeshkummathi/Desktop/NYUSA/Semester 4/RLAN/labs/btf-robot/data/data_straight/btf/robot_data_60_10_26_02_26_04_47_34.pkl'
+    filename = '/Users/jotheeshkummathi/Desktop/NYUSA/Semester 4/RLAN/labs/btf-robot/data/data_straight/btf/robot_data_40_10_26_02_26_06_33_23.pkl'
     
     ekf_data = data_handling.get_file_data_for_kf(filename)
 

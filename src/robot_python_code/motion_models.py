@@ -32,7 +32,7 @@ def variance_distance_travelled_s(distance, a=DISTANCE_VARIANCE_A, b=DISTANCE_VA
     var_s = max (0.0, a + b * abs(distance))
 
     return var_s
-0.000366
+
 def distance_travelled_s(encoder_counts, counts_to_m=COUNTS_TO_METERS):
     """Function to calculate distance from encoder counts"""
     s = encoder_counts / counts_to_m if counts_to_m > 0 else 0.0

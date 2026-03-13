@@ -11,34 +11,9 @@ import matplotlib.pyplot as plt
 from robot_python_code import motion_models, robot, parameters
 
 
-# old pkl files saved ParticleSet/State objects under module name 'particle_filter'
-# now it lives at robot_python_code.particle_filter
-# this remapper lets pickle reconstruct those classes when loading old files
-class _PickleModuleRemapper:
-    def find_module(self, fullname, path=None):
-        if fullname == 'particle_filter':
-            return self
-        return None
-
-    def load_module(self, fullname):
-        if fullname in sys.modules:
-            return sys.modules[fullname]
-        from robot_python_code import particle_filter
-        sys.modules[fullname] = particle_filter
-        return particle_filter
-
-_remapper = _PickleModuleRemapper()
-
-
 def _safe_load_pickle(filename):
-    # install remapper before load so pickle can find particle_filter classes
-    sys.meta_path.insert(0, _remapper)
-    try:
-        data_loader = robot.DataLoader(filename)
-        data_dict = data_loader.load()
-    finally:
-        if _remapper in sys.meta_path:
-            sys.meta_path.remove(_remapper)
+    data_loader = robot.DataLoader(filename)
+    data_dict = data_loader.load()
     return data_dict
 
 

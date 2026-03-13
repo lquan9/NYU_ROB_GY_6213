@@ -94,13 +94,22 @@ class DataLogger:
                 pickle.dump(self.dictionary, file_handle)
 
 
+class CustomUnpickler(pickle.Unpickler):
+    """Custom unpickler to fix module paths"""
+    def find_class(self, module, name):
+        if module == 'particle_filter':
+            module = 'robot_python_code.particle_filter'
+        elif module == 'motion_models':
+            module = 'robot_python_code.motion_models'
+        return super().find_class(module, name)
+
 class DataLoader:
     def __init__(self, filename):
         self.filename = filename
 
     def load(self):
         with open(self.filename, 'rb') as file_handle:
-            loaded_dict = pickle.load(file_handle)
+            loaded_dict = CustomUnpickler(file_handle).load()
         return loaded_dict
 
 

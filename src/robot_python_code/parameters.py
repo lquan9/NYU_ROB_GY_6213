@@ -125,9 +125,9 @@ data_name_list = ['time', 'control_signal', 'robot_sensor_signal',
 #    Trial 
 trial_type          = "steering"   # "steering" or "distance"
 extra_trial_log_time = 2000        # ms
-trial_max_speed     = 40
+trial_max_speed     = 50
 trial_time          = 7000         # ms
-trial_input         = -10         # delta for steering, u_x for distance
+trial_input         = -5         # delta for steering, u_x for distance
 
 #    Motion model 
 counts_to_m          = 3518
@@ -152,7 +152,7 @@ covariance_plot_scale = 100
 # Particle filter parameters
 num_particles = 100
 # lidar measurement noise variance in meters squared (used by PF weighting)
-distance_variance = 0.05
+distance_variance = 0.1
 
 
 # Defaults for PF lidar calibration helper in the GUI

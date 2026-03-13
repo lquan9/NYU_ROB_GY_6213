@@ -112,6 +112,49 @@ def get_file_data_for_pf(filename):
 
     return pf_data
 
+
+def estimate_lidar_bias_variance_from_pf_file(filename, known_distance_m,
+                                              min_distance_m=0.05,
+                                              max_distance_m=10.0):
+    """Estimate lidar bias and variance from a stationary-distance dataset.
+
+    Args:
+        filename: path to a logged `*.pkl` file.
+        known_distance_m: ground-truth distance to target wall/object in meters.
+        min_distance_m: lower bound to keep valid lidar samples.
+        max_distance_m: upper bound to keep valid lidar samples.
+
+    Returns:
+        dict with measurement count, mean, bias, variance, and std-dev.
+    """
+    pf_data = get_file_data_for_pf(filename)
+    samples = []
+
+    for row in pf_data:
+        signal = row[2]
+        for distance_raw in signal.distances:
+            distance_m = signal.convert_hardware_distance(distance_raw)
+            if min_distance_m <= distance_m <= max_distance_m:
+                samples.append(distance_m)
+
+    if len(samples) == 0:
+        raise ValueError(f"No lidar samples in valid range [{min_distance_m}, {max_distance_m}] for {filename}")
+
+    samples_np = np.array(samples, dtype=float)
+    mean_distance = float(np.mean(samples_np))
+    bias = mean_distance - float(known_distance_m)
+    variance = float(np.var(samples_np))
+
+    return {
+        'filename': str(filename),
+        'num_samples': int(len(samples)),
+        'known_distance_m': float(known_distance_m),
+        'measured_mean_m': mean_distance,
+        'bias_m': bias,
+        'variance_m2': variance,
+        'std_dev_m': float(np.sqrt(variance)),
+    }
+
 def plot_trial_basics(fig, trial_filename):
     """For a given trial, plot the encoder counts, velocities, steering angles"""
     time_list, encoder_count_list, velocity_list, steering_angle_list = get_file_data(trial_filename)

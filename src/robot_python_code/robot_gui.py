@@ -539,14 +539,114 @@ def main_page():
                         ui.notify(f'Steering calibration error: {str(e)}', type='negative')
                         print(f"Error during steering calibration: {e}")
 
+                def run_lidar_pf_calibration():
+                    """Estimate PF lidar noise from a stationary trial"""
+                    try:
+                        if not lidar_trial_selector.value:
+                            ui.notify('Please select a lidar trial file first.', type='warning')
+                            return
+
+                        result = data_handling.estimate_lidar_bias_variance_from_pf_file(
+                            filename=lidar_trial_selector.value,
+                            known_distance_m=lidar_known_distance_input.value,
+                            min_distance_m=lidar_min_distance_input.value,
+                            max_distance_m=lidar_max_distance_input.value,
+                        )
+
+                        parameters.distance_variance = result['variance_m2']
+                        pf_distance_variance_input.value = result['variance_m2']
+
+                        lidar_samples_label.text = str(result['num_samples'])
+                        lidar_mean_label.text = f"{result['measured_mean_m']:.4f} m"
+                        lidar_bias_label.text = f"{result['bias_m']:+.4f} m"
+                        lidar_variance_label.text = f"{result['variance_m2']:.6f} m^2"
+                        lidar_std_label.text = f"{result['std_dev_m']:.4f} m"
+                        lidar_file_label.text = Path(result['filename']).name
+
+                        ui.notify(
+                            f"PF lidar calibration complete. distance_variance set to \
+                                {result['variance_m2']:.6f} m^2",
+                            type='positive',
+                            timeout=6000,
+                        )
+                    except Exception as e:
+                        ui.notify(f'Lidar PF calibration error: {str(e)}', type='negative')
+                        print(f"Error during lidar PF calibration: {e}")
+
                 with ui.column().classes('gap-2'):
                     with ui.row().classes('items-center gap-2'):
-                        ui.button('Calibrate Encoders', on_click=run_encoder_calibration, icon='straighten').props('color=primary')
-                        ui.button('Calibrate Steering', on_click=run_steering_calibration, icon='pivot_table_chart').props('color=primary')
+                        ui.button('Calibrate Encoders', 
+                            on_click=run_encoder_calibration, 
+                            icon='straighten').props('color=primary')
+                        ui.button('Calibrate Steering', 
+                            on_click=run_steering_calibration, 
+                            icon='pivot_table_chart').props('color=primary')
                     # with ui.row().classes('items-center gap-2'):
                         # ui.upload(on_upload=handle_config_upload,
                         #           auto_upload=True).props('accept=.json').classes('max-w-xs').tooltip('Upload custom config')
                         # ui.button('Reset Config', on_click=reset_to_default_config, icon='refresh').props('flat color=grey')
+
+            with ui.card().classes('w-full'):
+                ui.label('PF Lidar Measurement Calibration').style('font-size: 16px; font-weight: bold;')
+                ui.label('Use a stationary trial at a known wall distance to tune PF distance_variance.').style('font-size: 12px; color: gray;')
+                with ui.grid(columns=3).classes('w-full'):
+                    lidar_trial_selector = ui.select(
+                        options={f: Path(f).name for f in trial_files},
+                        value=trial_files[0] if trial_files else None,
+                        label='Trial file'
+                    ).classes('w-full')
+                    lidar_known_distance_input = ui.number(
+                        value=parameters.lidar_calibration_known_distance_m,
+                        min=0.01,
+                        step=0.01,
+                        format='%.3f',
+                        label='Known distance (m)',
+                        on_change=lambda e: setattr(parameters, 'lidar_calibration_known_distance_m', e.value)
+                    )
+                    run_lidar_cal_btn = ui.button('Calibrate PF Lidar',
+                        on_click=run_lidar_pf_calibration,
+                        icon='sensors').props('color=primary')
+                with ui.grid(columns=3).classes('w-full'):
+                    lidar_min_distance_input = ui.number(value=parameters.lidar_calibration_min_distance_m,
+                        min=0.0,
+                        step=0.01,
+                        format='%.2f',
+                        label='Min valid distance (m)',
+                        on_change=lambda e: setattr(parameters,
+                        'lidar_calibration_min_distance_m',
+                        e.value)
+                    )
+                    lidar_max_distance_input = ui.number(value=parameters.lidar_calibration_max_distance_m,
+                        min=0.1,
+                        step=0.1,
+                        format='%.1f',
+                        label='Max valid distance (m)',
+                        on_change=lambda e: setattr(parameters,
+                        'lidar_calibration_max_distance_m',
+                        e.value)
+                    )
+                    pf_distance_variance_input = ui.number(
+                        value=parameters.distance_variance,
+                        format='%.6f',
+                        label='PF distance_variance (m^2)',
+                        on_change=lambda e: setattr(parameters, 'distance_variance', e.value),
+                    )
+                with ui.grid(columns=2).classes('w-full gap-2'):
+                    ui.label('File:').style('color: lightgray;')
+                    lidar_file_label = ui.label('--').style('color: white; font-family: monospace;')
+                    ui.label('Samples used:').style('color: lightgray;')
+                    lidar_samples_label = ui.label('--').style('color: white; font-family: monospace;')
+                    ui.label('Measured mean:').style('color: lightgray;')
+                    lidar_mean_label = ui.label('--').style('color: white; font-family: monospace;')
+                    ui.label('Bias (measured-known):').style('color: lightgray;')
+                    lidar_bias_label = ui.label('--').style('color: white; font-family: monospace;')
+                    ui.label('Variance:').style('color: lightgray;')
+                    lidar_variance_label = ui.label('--').style('color: white; font-family: monospace;')
+                    ui.label('Std dev:').style('color: lightgray;')
+                    lidar_std_label = ui.label('--').style('color: white; font-family: monospace;')
+                if not trial_files:
+                    run_lidar_cal_btn.props('disable')
+                    ui.label('No trial files found for lidar calibration.').style('font-size: 12px; color: #ff7f7f;')
 
             # encoder and distance
             with ui.card().classes('w-full'):
@@ -554,20 +654,32 @@ def main_page():
                 with ui.grid(columns=2).classes('w-full'):
                     with ui.column():
                         ui.label('counts_to_m (counts/m)')
-                        counts_to_m_input = ui.number(value=parameters.counts_to_m, format='%.1f',
-                                                      on_change=lambda e: setattr(parameters, 'counts_to_m', e.value))
+                        counts_to_m_input = ui.number(value=parameters.counts_to_m,
+                            format='%.1f',
+                            on_change=lambda e: setattr(parameters,
+                            'counts_to_m',
+                            e.value)
+                        )
                         ui.label('Formula: encoder_count_change / measured_distance').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('distance_variance_a (m^2)')
-                        distance_var_a_input = ui.number(value=parameters.distance_variance_a, format='%.6f',
-                                                        on_change=lambda e: setattr(parameters, 'distance_variance_a', e.value))
+                        distance_var_a_input = ui.number(value=parameters.distance_variance_a,
+                            format='%.6f',
+                            on_change=lambda e: setattr(parameters,
+                            'distance_variance_a',
+                            e.value)
+                        )
                         ui.label('Base variance in distance measurement').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('distance_variance_b')
-                        distance_var_b_input = ui.number(value=parameters.distance_variance_b, format='%.4f',
-                                                        on_change=lambda e: setattr(parameters, 'distance_variance_b', e.value))
+                        distance_var_b_input = ui.number(value=parameters.distance_variance_b,
+                            format='%.4f',
+                            on_change=lambda e: setattr(parameters,
+                            'distance_variance_b',
+                            e.value)
+                        )
                         ui.label('Variance scaling factor').style('font-size: 12px; color: gray;')
 
             # steering
@@ -576,26 +688,42 @@ def main_page():
                 with ui.grid(columns=2).classes('w-full'):
                     with ui.column():
                         ui.label('steering_to_w')
-                        steering_to_w_input = ui.number(value=parameters.steering_to_w, format='%.4f',
-                                                       on_change=lambda e: setattr(parameters, 'steering_to_w', e.value))
+                        steering_to_w_input = ui.number(value=parameters.steering_to_w,
+                            format='%.4f',
+                            on_change=lambda e: setattr(parameters,
+                            'steering_to_w',
+                            e.value)
+                        )
                         ui.label('Converts steering command to angular velocity').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('max_steer_deg (degrees)')
-                        max_steer_input = ui.number(value=parameters.max_steer_deg, format='%.1f',
-                                                   on_change=lambda e: setattr(parameters, 'max_steer_deg', e.value))
+                        max_steer_input = ui.number(value=parameters.max_steer_deg,
+                            format='%.1f',
+                            on_change=lambda e: setattr(parameters,
+                            'max_steer_deg',
+                            e.value)
+                        )
                         ui.label('Maximum steering angle').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('steering_variance_a (rad^2)')
-                        steering_var_a_input = ui.number(value=parameters.steering_variance_a, format='%.6f',
-                                                        on_change=lambda e: setattr(parameters, 'steering_variance_a', e.value))
+                        steering_var_a_input = ui.number(value=parameters.steering_variance_a,
+                            format='%.6f',
+                            on_change=lambda e: setattr(parameters,
+                            'steering_variance_a',
+                            e.value)
+                        )
                         ui.label('Base variance in steering').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('steering_variance_b')
-                        steering_var_b_input = ui.number(value=parameters.steering_variance_b, format='%.4f',
-                                                        on_change=lambda e: setattr(parameters, 'steering_variance_b', e.value))
+                        steering_var_b_input = ui.number(value=parameters.steering_variance_b,
+                            format='%.4f',
+                            on_change=lambda e: setattr(parameters,
+                            'steering_variance_b',
+                            e.value)
+                        )
                         ui.label('Variance scaling factor').style('font-size: 12px; color: gray;')
 
             # chasis
@@ -604,20 +732,32 @@ def main_page():
                 with ui.grid(columns=3).classes('w-full'):
                     with ui.column():
                         ui.label('wheelbase (m)')
-                        wheelbase_input = ui.number(value=parameters.wheelbase, format='%.4f',
-                                                   on_change=lambda e: setattr(parameters, 'wheelbase', e.value))
+                        wheelbase_input = ui.number(value=parameters.wheelbase,
+                            format='%.4f',
+                            on_change=lambda e: setattr(parameters,
+                            'wheelbase',
+                            e.value)
+                        )
                         ui.label('Distance between front and rear axles').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('track_width (m)')
-                        track_width_input = ui.number(value=parameters.track_width, format='%.4f',
-                                                     on_change=lambda e: setattr(parameters, 'track_width', e.value))
+                        track_width_input = ui.number(value=parameters.track_width,
+                            format='%.4f',
+                            on_change=lambda e: setattr(parameters,
+                            'track_width',
+                            e.value)
+                        )
                         ui.label('Distance between left and right wheels').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('wheel_radius (m)')
-                        wheel_radius_input = ui.number(value=parameters.wheel_radius, format='%.4f',
-                                                      on_change=lambda e: setattr(parameters, 'wheel_radius', e.value))
+                        wheel_radius_input = ui.number(value=parameters.wheel_radius,
+                            format='%.4f',
+                            on_change=lambda e: setattr(parameters,
+                            'wheel_radius',
+                            e.value)
+                        )
                         ui.label('Radius of the drive wheels').style('font-size: 12px; color: gray;')
 
         with ui.tab_panel(plot_tab):

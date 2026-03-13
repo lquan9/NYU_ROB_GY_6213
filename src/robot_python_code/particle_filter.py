@@ -407,7 +407,7 @@ def offline_pf(filename=None, use_correction=True, hold_show_plot=False):
     project_root = Path(__file__).resolve().parent.parent.parent
     if filename is None:
         trial_dir = project_root / 'data' / 'data_straight' / 'btf'
-        trial_files = sorted(trial_dir.glob('lab_*.pkl'))
+        trial_files = sorted(trial_dir.glob('*.pkl'))
         if len(trial_files) == 0:
             raise FileNotFoundError(
                 f"No trial files found in {trial_dir}. Pass an explicit filename to offline_pf()."

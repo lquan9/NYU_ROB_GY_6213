@@ -149,14 +149,16 @@ steering_scale_right = 0.7     # start here, tune up/down until right≈left rad
 I3                   = np.eye(3)
 covariance_plot_scale = 100
 
-# TODO:
-# PF parameters, modify the map and num particles as you see fit.
+# Particle filter parameters
 num_particles = 100
-# lidar measurement noise variance in meters squared
-#not tuned yet
+# lidar measurement noise variance in meters squared (used by PF weighting)
 distance_variance = 1.5
 
-# in parameters.py
+# Defaults for PF lidar calibration helper in the GUI
+lidar_calibration_known_distance_m = 1.0
+lidar_calibration_min_distance_m = 0.05
+lidar_calibration_max_distance_m = 10.0
+
 pf_known_start = False
 pf_start_x = 0.0
 pf_start_y = 0.0

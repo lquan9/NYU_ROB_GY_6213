@@ -401,13 +401,13 @@ def offline_pf():
     # Get data to filter
     # filename = './data/robot_data_0_0_25_02_26_21_41_33.pkl'
     project_root = Path(__file__).resolve().parent.parent.parent
-    filename = str(project_root / 'data' / 'data_straight' / 'clark' / 'robot_data_0_0_25_02_26_21_41_33.pkl')
+    filename = str(project_root / 'data' / 'data_straight' / 'btf' / 'robot_data_50_-10_12_03_26_19_35_53.pkl')
     pf_data = data_handling.get_file_data_for_pf(filename)
 
     particle_filter = ParticleFilter(
         parameters.num_particles, map,
-        initial_state=State(0.5, 2.0, 1.57),
-        state_stdev=State(0.1, 0.1, 0.1),
+        initial_state=State(0, 0, 0),
+        state_stdev=State( 0.01, 0.01, 0.01),
         known_start_state=True,
         encoder_counts_0=pf_data[0][2].encoder_counts
     )

@@ -280,7 +280,18 @@ class Robot:
         self.extended_kalman_filter = extended_kalman_filter.ExtendedKalmanFilter(
             x_0=[0, 0, 0], Sigma_0=parameters.I3 * 10e12, encoder_counts_0=0)
         map = particle_filter.Map(parameters.wall_corner_list)
-        self.particle_filter = particle_filter.ParticleFilter(parameters.num_particles, map, particle_filter.State(0,0,0), particle_filter.State(1,1,1), True, 0)
+        # self.particle_filter = particle_filter.ParticleFilter(
+        #     parameters.num_particles, map,
+        #     particle_filter.State(parameters.pf_start_x, parameters.pf_start_y, parameters.pf_start_theta),
+        #     particle_filter.State(parameters.pf_start_stdev, parameters.pf_start_stdev, parameters.pf_start_stdev),
+        #     parameters.pf_known_start,0)
+        self.particle_filter = particle_filter.ParticleFilter(
+            parameters.num_particles, map,
+            particle_filter.State(parameters.pf_start_x, parameters.pf_start_y, parameters.pf_start_theta),
+            particle_filter.State(parameters.pf_start_stdev, parameters.pf_start_stdev, parameters.pf_start_stdev),
+            parameters.pf_known_start,
+            self.robot_sensor_signal.encoder_counts)
+        self.pf_initialized = False
 
     def create_udp_communication(self, arduinoIP, localIP, arduinoPort, localPort, bufferSize):
         return create_udp_communication(arduinoIP, localIP, arduinoPort, localPort, bufferSize)
@@ -297,7 +308,12 @@ class Robot:
 
     def update_state_estimate(self):
         u_t = np.array([self.robot_sensor_signal.encoder_counts, self.robot_sensor_signal.steering])
-        # pass lidar signal whenever rays are available, not tied to camera
+        
+        # first time we get a real encoder reading, sync the PF baseline so delta starts at 0
+        if not self.pf_initialized and self.robot_sensor_signal.encoder_counts != 0:
+            self.particle_filter.last_encoder_counts = self.robot_sensor_signal.encoder_counts
+            self.pf_initialized = True
+
         if self.robot_sensor_signal.num_lidar_rays > 0:
             z_t = self.robot_sensor_signal
         else:

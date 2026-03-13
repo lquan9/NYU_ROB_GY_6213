@@ -125,9 +125,9 @@ data_name_list = ['time', 'control_signal', 'robot_sensor_signal',
 #    Trial 
 trial_type          = "steering"   # "steering" or "distance"
 extra_trial_log_time = 2000        # ms
-trial_max_speed     = 40
+trial_max_speed     = 50
 trial_time          = 5000         # ms
-trial_input         = 10         # delta for steering, u_x for distance
+trial_input         = -10         # delta for steering, u_x for distance
 
 #    Motion model 
 counts_to_m          = 3518
@@ -154,14 +154,27 @@ covariance_plot_scale = 100
 num_particles = 100
 # lidar measurement noise variance in meters squared
 #not tuned yet
-distance_variance = 0.03
+distance_variance = 1.5
+
+# in parameters.py
+pf_known_start = False
+pf_start_x = 0.0
+pf_start_y = 0.0
+pf_start_theta = 0.0
+pf_start_stdev = 0.1
+
+
 wall_corner_list = [
-    [0, 0, 2.74, 0], 
-    [0, 0, 0, 3.78], 
-    [0, 3.78, 1.92, 3.78],
-    [1.03, 1.61, 1.03, 2.19],
-    [1.03, 2.19, 1.41, 2.19],
-    [1.92, 3.78, 1.92, 3.32],
-    [1.92, 3.32, 2.74, 3.32],
-    [2.74, 3.32, 2.74, 0]
-    ]
+    [0.6096, 1.8288, 0, 1.8288],
+    [0, 1.8288, 0, 0],
+    [0, 0, 1.8288, 0],
+    [1.8288, 0, 1.8288, -0.4826],
+    [1.8288, -0.4826, 2.794, -0.4826],
+    [2.794, -0.4826, 2.794, 0],
+    [2.794, 0, 3.6576, 0],
+    [3.6576, 0, 3.6576, 1.8288],
+    [3.6576, 1.8288, 3.2004, 2.2352],
+    [3.2004, 2.2352, 3.2004, 2.9718],
+    [3.2004, 2.9718, 0.762, 2.9718],
+    [0.762, 2.9718, 0.6096, 1.8288]
+]

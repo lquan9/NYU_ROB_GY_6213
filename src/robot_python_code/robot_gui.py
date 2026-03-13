@@ -892,8 +892,8 @@ def main_page():
                               pf_tab_state['online_trail_y'].clear()
                           )).props('color=warning')
 
-            online_pf_plot = ui.pyplot(figsize=(7, 6)).classes('w-full')
-
+            online_pf_plot =  ui.pyplot(figsize=(12, 5)).classes('w-full h-1/2')
+            
             with ui.card().classes('w-full'):
                 ui.label('Offline PF').style('font-size: 18px; font-weight: bold;')
                 with ui.row().classes('items-center gap-4 w-full'):

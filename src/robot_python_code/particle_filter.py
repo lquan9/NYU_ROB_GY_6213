@@ -271,6 +271,11 @@ class ParticleSet:
                 cumulative_index += 1
             new_particles.append(self.particle_list[cumulative_index].deepcopy())
 
+        # reset prior after
+        uniform_weight = 1.0 / max(1, n)
+        for particle in new_particles:
+            particle.weight = uniform_weight
+
         self.particle_list = new_particles
 
     def update_mean_state(self):

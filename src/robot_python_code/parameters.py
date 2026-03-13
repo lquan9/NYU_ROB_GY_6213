@@ -5,7 +5,7 @@ import math
 import numpy as np
 
 #  Network
-localIP     = "192.168.0.195"
+localIP     = "192.168.0.200"
 arduinoIP   = "192.168.0.198"
 localPort   = 4010
 arduinoPort = 4010
@@ -125,8 +125,8 @@ data_name_list = ['time', 'control_signal', 'robot_sensor_signal',
 #    Trial 
 trial_type          = "steering"   # "steering" or "distance"
 extra_trial_log_time = 2000        # ms
-trial_max_speed     = 50
-trial_time          = 5000         # ms
+trial_max_speed     = 40
+trial_time          = 7000         # ms
 trial_input         = -10         # delta for steering, u_x for distance
 
 #    Motion model 
@@ -152,18 +152,35 @@ covariance_plot_scale = 100
 # Particle filter parameters
 num_particles = 100
 # lidar measurement noise variance in meters squared (used by PF weighting)
-distance_variance = 1.5
+distance_variance = 0.05
+
 
 # Defaults for PF lidar calibration helper in the GUI
 lidar_calibration_known_distance_m = 1.0
 lidar_calibration_min_distance_m = 0.05
 lidar_calibration_max_distance_m = 10.0
 
-pf_known_start = False
+pf_known_start = True
 pf_start_x = 0.0
 pf_start_y = 0.0
 pf_start_theta = 0.0
 pf_start_stdev = 0.1
+
+
+# wall_corner_list = [
+#     [0.6096, 1.8288, 0, 1.8288],
+#     [0, 1.8288, 0, 0],
+#     [0, 0, 1.8288, 0],
+#     [1.8288, 0, 1.8288, -0.4826],
+#     [1.8288, -0.4826, 2.794, -0.4826],
+#     [2.794, -0.4826, 2.794, 0],
+#     [2.794, 0, 3.6576, 0],
+#     [3.6576, 0, 3.6576, 1.8288],
+#     [3.6576, 1.8288, 3.2004, 2.2352],
+#     [3.2004, 2.2352, 3.2004, 2.9718],
+#     [3.2004, 2.9718, 0.762, 2.9718],
+#     [0.762, 2.9718, 0.6096, 1.8288]
+# ]
 
 
 wall_corner_list = [
@@ -178,5 +195,23 @@ wall_corner_list = [
     [3.6576, 1.8288, 3.2004, 2.2352],
     [3.2004, 2.2352, 3.2004, 2.9718],
     [3.2004, 2.9718, 0.762, 2.9718],
-    [0.762, 2.9718, 0.6096, 1.8288]
+    [0.762, 2.9718, 0.6096, 1.8288],
+
+    # 5-inch square #1
+    [1.8288, 1.2192, 1.6997, 1.2192],
+    [1.6997, 1.2192, 1.6997, 1.3487],
+    [1.6997, 1.3487, 1.8288, 1.3487],
+    [1.8288, 1.3487, 1.8288, 1.2192],
+
+    # 5-inch square #2
+    [1.2192, 1.8288, 1.3487, 1.8288],
+    [1.3487, 1.8288, 1.3487, 1.9597],
+    [1.3487, 1.9597, 1.2192, 1.9597],
+    [1.2192, 1.9597, 1.2192, 1.8288],
+
+    # 8-inch square
+    [2.4384, 0.6096, 2.642, 0.6096],
+    [2.642, 0.6096, 2.642, 0.4063],
+    [2.642, 0.4063, 2.4384, 0.4063],
+    [2.4384, 0.4063, 2.4384, 0.6096]
 ]

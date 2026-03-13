@@ -398,8 +398,9 @@ class ParticleFilterPlot:
 
 
 # Function used to test your PF offline with logged data.
-def offline_pf(filename=None, use_correction=True, hold_show_plot=False):
-    
+# def offline_pf(filename=None, use_correction=True, hold_show_plot=False):
+def offline_pf(filename="/home/jotheesh/Documents/rlan/btf-robot/data/data_straight/btf/lab_40_-10_13_03_26_11_14_32.pkl", use_correction=True, hold_show_plot=False):
+
     # Make a map of walls
     map = Map(parameters.wall_corner_list)
 

@@ -406,9 +406,9 @@ def offline_pf():
 
     particle_filter = ParticleFilter(
         parameters.num_particles, map,
-        initial_state=State(0, 0, 0),
-        state_stdev=State( 0.01, 0.01, 0.01),
-        known_start_state=True,
+        initial_state=State(parameters.pf_start_x, parameters.pf_start_y, parameters.pf_start_theta),
+        state_stdev=State(parameters.pf_start_stdev, parameters.pf_start_stdev, parameters.pf_start_stdev),
+        known_start_state=parameters.pf_known_start,
         encoder_counts_0=pf_data[0][2].encoder_counts
     )
 
@@ -428,4 +428,5 @@ def offline_pf():
 
 
 if __name__ == '__main__':
+
     offline_pf()

@@ -1068,6 +1068,34 @@ def main_page():
                 px = [p.state.x for p in pf.particle_set.particle_list]
                 py = [p.state.y for p in pf.particle_set.particle_list]
                 ax.plot(px, py, 'g.', markersize=3, alpha=0.5, label='Particles')
+
+                # PF confidence from covariance
+                if len(px) >= 2:
+                    cov_xy = np.cov(np.array([px, py]))
+                    eigvals, eigvecs = np.linalg.eigh(cov_xy)
+                    eigvals = np.maximum(eigvals, 0)
+                    order = eigvals.argsort()[::-1]
+                    eigvals = eigvals[order]
+                    eigvecs = eigvecs[:, order]
+                    angle_deg = np.degrees(np.arctan2(eigvecs[1, 0], eigvecs[0, 0]))
+
+                    width = 2 * 2.0 * np.sqrt(eigvals[0])
+                    height = 2 * 2.0 * np.sqrt(eigvals[1])
+
+                    conf_ellipse = Ellipse(
+                        (x_est, y_est),
+                        width=width,
+                        height=height,
+                        angle=angle_deg,
+                        edgecolor='yellow',
+                        facecolor='none',
+                        linewidth=1.5,
+                        linestyle='--',
+                        label='PF 2 sigma ellipse',
+                        zorder=5,
+                    )
+                    ax.add_patch(conf_ellipse)
+
                 if len(pf_tab_state['online_trail_x']) > 1:
                     ax.plot(pf_tab_state['online_trail_x'],
                             pf_tab_state['online_trail_y'],

@@ -60,7 +60,7 @@ class DataLogger:
         self.currently_logging = False
 
     def reset_logfile(self, control_signal):
-        self.filename = self.datapath / ("robot_data_" + str(control_signal[0]) + "_" + str(control_signal[1]) + strftime("_%d_%m_%y_%H_%M_%S.pkl"))
+        self.filename = self.datapath / ("lab_" + str(control_signal[0]) + "_" + str(control_signal[1]) + strftime("_%d_%m_%y_%H_%M_%S.pkl"))
         self.dictionary = {}
         for name in self.data_name_list:
             self.dictionary[name] = []

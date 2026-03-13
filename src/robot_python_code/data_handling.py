@@ -50,7 +50,7 @@ def get_trial_files(trial_data_dir):
     trial_path = Path(trial_data_dir)
     if not trial_path.exists():
         return []
-    return sorted(str(path) for path in trial_path.glob('robot_data_*.pkl'))
+    return sorted(str(path) for path in trial_path.glob('*.pkl'))
 
 # Open a file and return data in a form ready to plot
 def get_file_data_for_kf(filename):
@@ -440,38 +440,13 @@ def plot_trial_aggregates(fig, trial_metrics):
 ######### MAIN ########
 
 # Some sample data to test with
-files_and_data = [
-    ['robot_data_60_0_28_01_26_13_41_44.pkl', 67/100], # filename, measured distance in meters
-    ['robot_data_60_0_28_01_26_13_43_41.pkl', 68/100],
-    ['robot_data_60_0_28_01_26_13_37_15.pkl', 113/100],
-    ['robot_data_60_0_28_01_26_13_35_18.pkl', 107/100],
-    ['robot_data_60_0_28_01_26_13_41_10.pkl', 65/100],
-    ['robot_data_60_0_28_01_26_13_42_55.pkl', 70/100],
-    ['robot_data_60_0_28_01_26_13_39_36.pkl', 138/100],
-    ['robot_data_60_0_28_01_26_13_42_19.pkl', 69/100],
-    ['robot_data_60_0_28_01_26_13_36_10.pkl', 109/100],
-    ['robot_data_60_0_28_01_26_13_33_20.pkl', 100/100],
-    ['robot_data_60_0_28_01_26_13_34_28.pkl', 103/100],
-    ]
+files_and_data = []
 
-files_and_data_curve = [
-    ['robot_data_60_10_28_01_26_13_44_28.pkl', 61/100, 31/100],
-    ['robot_data_60_10_28_01_26_13_45_14.pkl', 61/100, 32/100],
-    ['robot_data_60_10_28_01_26_13_45_56.pkl', 61/100, 30/100],
-    ['robot_data_60_10_28_01_26_13_46_26.pkl', 61/100, 31/100],	
-    ['robot_data_60_10_28_01_26_13_47_10.pkl', 62/100, 29/100],
-    ['robot_data_60_10_28_01_26_13_48_25.pkl', 70/100, 106/100],
-    ['robot_data_60_10_28_01_26_13_49_08.pkl', 73/100, 106/100],
-    ['robot_data_60_10_28_01_26_13_50_55.pkl', 73/100, 71/100],
-    ['robot_data_60_10_28_01_26_13_51_34.pkl', 76/100, 69/100],
-    ['robot_data_60_10_28_01_26_13_52_07.pkl', 78/100, 71/100],
-    ['robot_data_60_10_28_01_26_13_52_35.pkl', 76/100, 70/100],
-    ['robot_data_60_10_28_01_26_13_53_08.pkl', 76/100, 71/100],
-]
+files_and_data_curve = []
 
 # Plot the motion model predictions for a single trial
 if False:
-    filename = './data_straight/robot_data_60_0_28_01_26_13_36_10.pkl'
+    filename = ''
     run_my_model_on_trial(filename)
 
 # Plot the motion model predictions for each trial in a folder
@@ -494,7 +469,7 @@ if False:
 
 # Try to load some camera data from a single trial
 if False:
-    filename = './data/robot_data_68_0_06_02_26_17_12_19.pkl'
+    filename = ''
     time_list, encoder_count_list, velocity_list, steering_angle_list, x_camera_list, y_camera_list, z_camera_list, yaw_camera_list= get_file_data(filename)
 
     wheel_radius = 0.034 #cm

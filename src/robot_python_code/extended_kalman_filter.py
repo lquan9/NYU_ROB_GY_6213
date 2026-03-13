@@ -253,8 +253,7 @@ class KalmanFilterPlot:
 def offline_efk(use_correction=True):
     # Get data to filter
     plt.ion()
-    # filename = './data/data_straight/btf/robot_data_40_15_10_02_26_23_13_58.pkl'
-    filename = '/Users/jotheeshkummathi/Desktop/NYUSA/Semester 4/RLAN/labs/btf-robot/data/data_straight/btf/robot_data_60_10_26_02_26_04_47_34.pkl'
+    filename = ''
     
     ekf_data = data_handling.get_file_data_for_kf(filename)
 

@@ -398,15 +398,22 @@ class ParticleFilterPlot:
 
 
 # Function used to test your PF offline with logged data.
-def offline_pf():
+def offline_pf(filename=None, use_correction=True, hold_show_plot=False):
     
     # Make a map of walls
     map = Map(parameters.wall_corner_list)
 
     # Get data to filter
-    # filename = './data/robot_data_0_0_25_02_26_21_41_33.pkl'
     project_root = Path(__file__).resolve().parent.parent.parent
-    filename = str(project_root / 'data' / 'data_straight' / 'btf' / 'robot_data_50_-10_12_03_26_19_35_53.pkl')
+    if filename is None:
+        trial_dir = project_root / 'data' / 'data_straight' / 'btf'
+        trial_files = sorted(trial_dir.glob('lab_*.pkl'))
+        if len(trial_files) == 0:
+            raise FileNotFoundError(
+                f"No trial files found in {trial_dir}. Pass an explicit filename to offline_pf()."
+            )
+        filename = str(trial_files[-1])
+
     pf_data = data_handling.get_file_data_for_pf(filename)
 
     particle_filter = ParticleFilter(
@@ -426,10 +433,25 @@ def offline_pf():
         u_t = np.array([row[2].encoder_counts, row[2].steering])
         z_t = row[2]
 
-        particle_filter.update(u_t, z_t, delta_t)
-        particle_filter_plot.update(particle_filter.particle_set.mean_state, particle_filter.particle_set, z_t, False)
+        if use_correction:
+            particle_filter.update(u_t, z_t, delta_t)
+        else:
+            particle_filter.prediction(u_t, delta_t)
+            particle_filter.particle_set.update_mean_state()
 
-    particle_filter_plot.update(particle_filter.particle_set.mean_state, particle_filter.particle_set, z_t, False)
+        particle_filter_plot.update(
+            particle_filter.particle_set.mean_state,
+            particle_filter.particle_set,
+            z_t,
+            hold_show_plot
+        )
+
+    particle_filter_plot.update(
+        particle_filter.particle_set.mean_state,
+        particle_filter.particle_set,
+        z_t,
+        hold_show_plot
+    )
 
 
 if __name__ == '__main__':

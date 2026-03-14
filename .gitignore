@@ -593,4 +593,5 @@ Research
 
 # ignore sensitive files
 wifi_credentials.h
+reports/
 

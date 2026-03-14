@@ -23,7 +23,7 @@ matplotlib.use('Agg') # Force non-interactive backend
 
 # Global variables
 LOGGING = False
-STREAM_VIDEO = True
+STREAM_VIDEO = False
 ASSETS_DIR = Path(__file__).parent / 'assets'
 
 if not ASSETS_DIR.exists():
@@ -83,6 +83,9 @@ def main_page():
     if STREAM_VIDEO:
         cam_src = parameters.camera_source if parameters.camera_source is not None else parameters.camera_id
         video_capture = cv2.VideoCapture(cam_src)
+
+    placeholder = Response(content=b'\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00\xff\xd9',
+                           media_type='image/jpeg')
 
     # Enable frame grabs from the video stream.
     @app.get('/video/frame')
@@ -170,6 +173,10 @@ def main_page():
 
     def show_lidar_plot():
         """ Visualize the lidar scans"""
+        try:
+            main_plot
+        except NameError:
+            return
         with main_plot:
             fig = main_plot.fig
             fig.patch.set_facecolor('black')
@@ -192,6 +199,10 @@ def main_page():
 
     # Visualize the lidar scans
     def show_localization_plot():
+        try:
+            main_plot
+        except NameError:
+            return
         with main_plot:
             fig = main_plot.fig
             fig.patch.set_facecolor('black')
@@ -201,9 +212,12 @@ def main_page():
             plt.tick_params(axis='y', colors='lightgray')
             
             sigma = 3
-            covar_matrix = parameters.covariance_plot_scale * robot.extended_kalman_filter.state_covariance[0:2,0:2]#np.array([[sigma, -sigma*0.9],[ -sigma*0.9, sigma]])
-            x_est = robot.extended_kalman_filter.state_mean[0]
-            y_est = robot.extended_kalman_filter.state_mean[1]
+            # covar_matrix = parameters.covariance_plot_scale * robot.extended_kalman_filter.state_covariance[0:2,0:2]#np.array([[sigma, -sigma*0.9],[ -sigma*0.9, sigma]])
+            # x_est = robot.extended_kalman_filter.state_mean[0]
+            # y_est = robot.extended_kalman_filter.state_mean[1]
+            covar_matrix = parameters.covariance_plot_scale * robot_instance.extended_kalman_filter.state_covariance[0:2,0:2]
+            x_est = robot_instance.extended_kalman_filter.state_mean[0]
+            y_est = robot_instance.extended_kalman_filter.state_mean[1]
             lambda_, v = np.linalg.eig(covar_matrix)
             lambda_ = np.sqrt(lambda_)
             # lambda_ = np.sqrt(np.abs(lambda_))
@@ -230,7 +244,7 @@ def main_page():
             slider_steering.value = parameters.trial_input
         elif parameters.trial_type == "distance":
             slider_steering.value = 0
-            if math.abs(parameters.trial_input) < parameters.trial_max_speed:
+            if abs(parameters.trial_input) < parameters.trial_max_speed:
                 slider_speed.value = parameters.trial_input
             else:
                 slider_speed.value = parameters.trial_max_speed
@@ -317,9 +331,16 @@ def main_page():
         plot_tab = ui.tab('Data Plots')
         sim_tab = ui.tab('Simulation')
         ekf_tab = ui.tab('EKF')
+        pf_tab = ui.tab('PF')
 
     # EKF tab shared state
     ekf_tab_state = {
+        'online_trail_x': [],
+        'online_trail_y': [],
+        'offline_running': False,
+    }
+
+    pf_tab_state = {
         'online_trail_x': [],
         'online_trail_y': [],
         'offline_running': False,
@@ -518,14 +539,114 @@ def main_page():
                         ui.notify(f'Steering calibration error: {str(e)}', type='negative')
                         print(f"Error during steering calibration: {e}")
 
+                def run_lidar_pf_calibration():
+                    """Estimate PF lidar noise from a stationary trial"""
+                    try:
+                        if not lidar_trial_selector.value:
+                            ui.notify('Please select a lidar trial file first.', type='warning')
+                            return
+
+                        result = data_handling.estimate_lidar_bias_variance_from_pf_file(
+                            filename=lidar_trial_selector.value,
+                            known_distance_m=lidar_known_distance_input.value,
+                            min_distance_m=lidar_min_distance_input.value,
+                            max_distance_m=lidar_max_distance_input.value,
+                        )
+
+                        parameters.distance_variance = result['variance_m2']
+                        pf_distance_variance_input.value = result['variance_m2']
+
+                        lidar_samples_label.text = str(result['num_samples'])
+                        lidar_mean_label.text = f"{result['measured_mean_m']:.4f} m"
+                        lidar_bias_label.text = f"{result['bias_m']:+.4f} m"
+                        lidar_variance_label.text = f"{result['variance_m2']:.6f} m^2"
+                        lidar_std_label.text = f"{result['std_dev_m']:.4f} m"
+                        lidar_file_label.text = Path(result['filename']).name
+
+                        ui.notify(
+                            f"PF lidar calibration complete. distance_variance set to \
+                                {result['variance_m2']:.6f} m^2",
+                            type='positive',
+                            timeout=6000,
+                        )
+                    except Exception as e:
+                        ui.notify(f'Lidar PF calibration error: {str(e)}', type='negative')
+                        print(f"Error during lidar PF calibration: {e}")
+
                 with ui.column().classes('gap-2'):
                     with ui.row().classes('items-center gap-2'):
-                        ui.button('Calibrate Encoders', on_click=run_encoder_calibration, icon='straighten').props('color=primary')
-                        ui.button('Calibrate Steering', on_click=run_steering_calibration, icon='pivot_table_chart').props('color=primary')
+                        ui.button('Calibrate Encoders', 
+                            on_click=run_encoder_calibration, 
+                            icon='straighten').props('color=primary')
+                        ui.button('Calibrate Steering', 
+                            on_click=run_steering_calibration, 
+                            icon='pivot_table_chart').props('color=primary')
                     # with ui.row().classes('items-center gap-2'):
                         # ui.upload(on_upload=handle_config_upload,
                         #           auto_upload=True).props('accept=.json').classes('max-w-xs').tooltip('Upload custom config')
                         # ui.button('Reset Config', on_click=reset_to_default_config, icon='refresh').props('flat color=grey')
+
+            with ui.card().classes('w-full'):
+                ui.label('PF Lidar Measurement Calibration').style('font-size: 16px; font-weight: bold;')
+                ui.label('Use a stationary trial at a known wall distance to tune PF distance_variance.').style('font-size: 12px; color: gray;')
+                with ui.grid(columns=3).classes('w-full'):
+                    lidar_trial_selector = ui.select(
+                        options={f: Path(f).name for f in trial_files},
+                        value=trial_files[0] if trial_files else None,
+                        label='Trial file'
+                    ).classes('w-full')
+                    lidar_known_distance_input = ui.number(
+                        value=parameters.lidar_calibration_known_distance_m,
+                        min=0.01,
+                        step=0.01,
+                        format='%.3f',
+                        label='Known distance (m)',
+                        on_change=lambda e: setattr(parameters, 'lidar_calibration_known_distance_m', e.value)
+                    )
+                    run_lidar_cal_btn = ui.button('Calibrate PF Lidar',
+                        on_click=run_lidar_pf_calibration,
+                        icon='sensors').props('color=primary')
+                with ui.grid(columns=3).classes('w-full'):
+                    lidar_min_distance_input = ui.number(value=parameters.lidar_calibration_min_distance_m,
+                        min=0.0,
+                        step=0.01,
+                        format='%.2f',
+                        label='Min valid distance (m)',
+                        on_change=lambda e: setattr(parameters,
+                        'lidar_calibration_min_distance_m',
+                        e.value)
+                    )
+                    lidar_max_distance_input = ui.number(value=parameters.lidar_calibration_max_distance_m,
+                        min=0.1,
+                        step=0.1,
+                        format='%.1f',
+                        label='Max valid distance (m)',
+                        on_change=lambda e: setattr(parameters,
+                        'lidar_calibration_max_distance_m',
+                        e.value)
+                    )
+                    pf_distance_variance_input = ui.number(
+                        value=parameters.distance_variance,
+                        format='%.6f',
+                        label='PF distance_variance (m^2)',
+                        on_change=lambda e: setattr(parameters, 'distance_variance', e.value),
+                    )
+                with ui.grid(columns=2).classes('w-full gap-2'):
+                    ui.label('File:').style('color: lightgray;')
+                    lidar_file_label = ui.label('--').style('color: white; font-family: monospace;')
+                    ui.label('Samples used:').style('color: lightgray;')
+                    lidar_samples_label = ui.label('--').style('color: white; font-family: monospace;')
+                    ui.label('Measured mean:').style('color: lightgray;')
+                    lidar_mean_label = ui.label('--').style('color: white; font-family: monospace;')
+                    ui.label('Bias (measured-known):').style('color: lightgray;')
+                    lidar_bias_label = ui.label('--').style('color: white; font-family: monospace;')
+                    ui.label('Variance:').style('color: lightgray;')
+                    lidar_variance_label = ui.label('--').style('color: white; font-family: monospace;')
+                    ui.label('Std dev:').style('color: lightgray;')
+                    lidar_std_label = ui.label('--').style('color: white; font-family: monospace;')
+                if not trial_files:
+                    run_lidar_cal_btn.props('disable')
+                    ui.label('No trial files found for lidar calibration.').style('font-size: 12px; color: #ff7f7f;')
 
             # encoder and distance
             with ui.card().classes('w-full'):
@@ -533,20 +654,32 @@ def main_page():
                 with ui.grid(columns=2).classes('w-full'):
                     with ui.column():
                         ui.label('counts_to_m (counts/m)')
-                        counts_to_m_input = ui.number(value=parameters.counts_to_m, format='%.1f',
-                                                      on_change=lambda e: setattr(parameters, 'counts_to_m', e.value))
+                        counts_to_m_input = ui.number(value=parameters.counts_to_m,
+                            format='%.1f',
+                            on_change=lambda e: setattr(parameters,
+                            'counts_to_m',
+                            e.value)
+                        )
                         ui.label('Formula: encoder_count_change / measured_distance').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('distance_variance_a (m^2)')
-                        distance_var_a_input = ui.number(value=parameters.distance_variance_a, format='%.6f',
-                                                        on_change=lambda e: setattr(parameters, 'distance_variance_a', e.value))
+                        distance_var_a_input = ui.number(value=parameters.distance_variance_a,
+                            format='%.6f',
+                            on_change=lambda e: setattr(parameters,
+                            'distance_variance_a',
+                            e.value)
+                        )
                         ui.label('Base variance in distance measurement').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('distance_variance_b')
-                        distance_var_b_input = ui.number(value=parameters.distance_variance_b, format='%.4f',
-                                                        on_change=lambda e: setattr(parameters, 'distance_variance_b', e.value))
+                        distance_var_b_input = ui.number(value=parameters.distance_variance_b,
+                            format='%.4f',
+                            on_change=lambda e: setattr(parameters,
+                            'distance_variance_b',
+                            e.value)
+                        )
                         ui.label('Variance scaling factor').style('font-size: 12px; color: gray;')
 
             # steering
@@ -555,26 +688,42 @@ def main_page():
                 with ui.grid(columns=2).classes('w-full'):
                     with ui.column():
                         ui.label('steering_to_w')
-                        steering_to_w_input = ui.number(value=parameters.steering_to_w, format='%.4f',
-                                                       on_change=lambda e: setattr(parameters, 'steering_to_w', e.value))
+                        steering_to_w_input = ui.number(value=parameters.steering_to_w,
+                            format='%.4f',
+                            on_change=lambda e: setattr(parameters,
+                            'steering_to_w',
+                            e.value)
+                        )
                         ui.label('Converts steering command to angular velocity').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('max_steer_deg (degrees)')
-                        max_steer_input = ui.number(value=parameters.max_steer_deg, format='%.1f',
-                                                   on_change=lambda e: setattr(parameters, 'max_steer_deg', e.value))
+                        max_steer_input = ui.number(value=parameters.max_steer_deg,
+                            format='%.1f',
+                            on_change=lambda e: setattr(parameters,
+                            'max_steer_deg',
+                            e.value)
+                        )
                         ui.label('Maximum steering angle').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('steering_variance_a (rad^2)')
-                        steering_var_a_input = ui.number(value=parameters.steering_variance_a, format='%.6f',
-                                                        on_change=lambda e: setattr(parameters, 'steering_variance_a', e.value))
+                        steering_var_a_input = ui.number(value=parameters.steering_variance_a,
+                            format='%.6f',
+                            on_change=lambda e: setattr(parameters,
+                            'steering_variance_a',
+                            e.value)
+                        )
                         ui.label('Base variance in steering').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('steering_variance_b')
-                        steering_var_b_input = ui.number(value=parameters.steering_variance_b, format='%.4f',
-                                                        on_change=lambda e: setattr(parameters, 'steering_variance_b', e.value))
+                        steering_var_b_input = ui.number(value=parameters.steering_variance_b,
+                            format='%.4f',
+                            on_change=lambda e: setattr(parameters,
+                            'steering_variance_b',
+                            e.value)
+                        )
                         ui.label('Variance scaling factor').style('font-size: 12px; color: gray;')
 
             # chasis
@@ -583,20 +732,32 @@ def main_page():
                 with ui.grid(columns=3).classes('w-full'):
                     with ui.column():
                         ui.label('wheelbase (m)')
-                        wheelbase_input = ui.number(value=parameters.wheelbase, format='%.4f',
-                                                   on_change=lambda e: setattr(parameters, 'wheelbase', e.value))
+                        wheelbase_input = ui.number(value=parameters.wheelbase,
+                            format='%.4f',
+                            on_change=lambda e: setattr(parameters,
+                            'wheelbase',
+                            e.value)
+                        )
                         ui.label('Distance between front and rear axles').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('track_width (m)')
-                        track_width_input = ui.number(value=parameters.track_width, format='%.4f',
-                                                     on_change=lambda e: setattr(parameters, 'track_width', e.value))
+                        track_width_input = ui.number(value=parameters.track_width,
+                            format='%.4f',
+                            on_change=lambda e: setattr(parameters,
+                            'track_width',
+                            e.value)
+                        )
                         ui.label('Distance between left and right wheels').style('font-size: 12px; color: gray;')
 
                     with ui.column():
                         ui.label('wheel_radius (m)')
-                        wheel_radius_input = ui.number(value=parameters.wheel_radius, format='%.4f',
-                                                      on_change=lambda e: setattr(parameters, 'wheel_radius', e.value))
+                        wheel_radius_input = ui.number(value=parameters.wheel_radius,
+                            format='%.4f',
+                            on_change=lambda e: setattr(parameters,
+                            'wheel_radius',
+                            e.value)
+                        )
                         ui.label('Radius of the drive wheels').style('font-size: 12px; color: gray;')
 
         with ui.tab_panel(plot_tab):
@@ -862,6 +1023,239 @@ def main_page():
 
             run_offline_button.on_click(run_offline_ekf)
 
+        with ui.tab_panel(pf_tab):
+            with ui.card().classes('w-full'):
+                ui.label('Online PF').style('font-size: 18px; font-weight: bold;')
+                ui.button('Clear Trail', icon='clear',
+                          on_click=lambda: (
+                              pf_tab_state['online_trail_x'].clear(),
+                              pf_tab_state['online_trail_y'].clear()
+                          )).props('color=warning')
+
+            online_pf_plot =  ui.pyplot(figsize=(12, 5)).classes('w-full h-1/2')
+            
+            with ui.card().classes('w-full'):
+                ui.label('Offline PF').style('font-size: 18px; font-weight: bold;')
+                with ui.row().classes('items-center gap-4 w-full'):
+                    if trial_files:
+                        offline_pf_selector = ui.select(
+                            options={f: Path(f).name for f in trial_files},
+                            value=trial_files[0],
+                            label='Select a data file'
+                        ).classes('w-96')
+                    else:
+                        offline_pf_selector = None
+                        ui.label('No trial files found.').style('color: #ff7f7f')
+                    pf_correction_toggle = ui.switch('Use Lidar Correction', value=True)
+                with ui.row().classes('items-center gap-4'):
+                    run_offline_pf_button = ui.button('Run Offline PF', icon='play_arrow').props('color=positive')
+                    offline_pf_status_label = ui.label('Ready.').style('font-size: 13px; color: lightgray;')
+
+            offline_pf_traj_plot = ui.pyplot(figsize=(7, 6)).classes('w-full')
+
+            pf_playback = {
+                'est_x': [], 'est_y': [], 'est_theta': [],
+                'particles_x': [], 'particles_y': [],
+                'frame': 0, 'timer': None,
+                'use_correction': True,
+            }
+
+            def draw_pf_frame(frame_idx):
+                try:
+                    state_x = pf_playback['est_x'][frame_idx]
+                    state_y = pf_playback['est_y'][frame_idx]
+                    state_theta = pf_playback['est_theta'][frame_idx]
+                    px = pf_playback['particles_x'][frame_idx]
+                    py = pf_playback['particles_y'][frame_idx]
+                    with offline_pf_traj_plot:
+                        fig = offline_pf_traj_plot.fig
+                        fig.clear()
+                        ax = fig.add_subplot(1, 1, 1)
+                        ax.set_facecolor('black')
+                        fig.patch.set_facecolor('black')
+                        from robot_python_code import particle_filter as pf_module
+                        pf_map = pf_module.Map(parameters.wall_corner_list)
+                        for wall in pf_map.wall_list:
+                            ax.plot([wall.corner1.x, wall.corner2.x],
+                                    [wall.corner1.y, wall.corner2.y], 'w-', linewidth=1.5)
+                        ax.plot(px, py, 'g.', markersize=3, alpha=0.5, label='Particles')
+                        if frame_idx > 0:
+                            ax.plot(pf_playback['est_x'][:frame_idx + 1],
+                                    pf_playback['est_y'][:frame_idx + 1],
+                                    'r-', linewidth=1, alpha=0.5, label='PF Trail')
+                        ax.plot(state_x, state_y, 'ro', markersize=8, zorder=6)
+                        ax.annotate('',
+                                    xy=(state_x + 0.15 * math.cos(state_theta),
+                                        state_y + 0.15 * math.sin(state_theta)),
+                                    xytext=(state_x, state_y),
+                                    arrowprops=dict(arrowstyle='->', color='green', lw=2), zorder=7)
+                        ax.set_xlim(pf_map.plot_range[0], pf_map.plot_range[1])
+                        ax.set_ylim(pf_map.plot_range[2], pf_map.plot_range[3])
+                        ax.set_xlabel('X (m)', color='white')
+                        ax.set_ylabel('Y (m)', color='white')
+                        title = 'Prediction Only' if not pf_playback['use_correction'] else 'Full PF'
+                        ax.set_title(title, color='white')
+                        ax.tick_params(colors='white')
+                        ax.grid(True, alpha=0.3)
+                        ax.legend(loc='upper right', fontsize=8, facecolor='black', labelcolor='white')
+                except Exception as e:
+                    print(f"draw_pf_frame error: {e}")
+
+            def advance_pf_frame():
+                if pf_playback['frame'] >= len(pf_playback['est_x']):
+                    if pf_playback['timer']:
+                        pf_playback['timer'].cancel()
+                        pf_playback['timer'] = None
+                    pf_tab_state['offline_running'] = False
+                    offline_pf_status_label.text = f"Done. {len(pf_playback['est_x'])} frames."
+                    return
+                draw_pf_frame(pf_playback['frame'])
+                pf_playback['frame'] += 1
+
+            # compute_pf runs in a separate thread so the event loop stays free
+            def compute_pf_sync(filename, use_correction):
+                from robot_python_code import particle_filter as pf_module
+                pf_data = data_handling.get_file_data_for_pf(filename)
+                pf_map = pf_module.Map(parameters.wall_corner_list)
+                encoder_counts_0 = pf_data[0][2].encoder_counts
+                offline_filter = pf_module.ParticleFilter(
+                    parameters.num_particles, pf_map,
+                    initial_state=pf_module.State(0.5, 2.0, 1.57),
+                    state_stdev=pf_module.State(0.1, 0.1, 0.1),
+                    known_start_state=True,
+                    encoder_counts_0=encoder_counts_0
+                )
+                frames = {'est_x': [], 'est_y': [], 'est_theta': [], 'particles_x': [], 'particles_y': []}
+                for t in range(1, len(pf_data)):
+                    delta_t = pf_data[t][0] - pf_data[t - 1][0]
+                    u_t = np.array([pf_data[t][2].encoder_counts, pf_data[t][2].steering])
+                    z_t = pf_data[t][2] if use_correction else None
+                    offline_filter.update(u_t, z_t, delta_t)
+                    mean = offline_filter.particle_set.mean_state
+                    frames['est_x'].append(mean.x)
+                    frames['est_y'].append(mean.y)
+                    frames['est_theta'].append(mean.theta)
+                    frames['particles_x'].append([p.state.x for p in offline_filter.particle_set.particle_list])
+                    frames['particles_y'].append([p.state.y for p in offline_filter.particle_set.particle_list])
+                return frames
+
+            async def run_offline_pf():
+                if not offline_pf_selector or not offline_pf_selector.value:
+                    ui.notify('Please select a data file first.', type='warning')
+                    return
+                if pf_tab_state['offline_running']:
+                    ui.notify('Already running.', type='warning')
+                    return
+                if pf_playback['timer']:
+                    pf_playback['timer'].cancel()
+                    pf_playback['timer'] = None
+
+                use_correction = pf_correction_toggle.value
+                filename = offline_pf_selector.value
+                offline_pf_status_label.text = 'Computing PF... this may take a moment.'
+                run_offline_pf_button.props('disable')
+                print(f"=== OFFLINE PF: file={filename}, correction={use_correction} ===")
+
+                try:
+                    import asyncio
+                    from concurrent.futures import ThreadPoolExecutor
+                    loop = asyncio.get_event_loop()
+                    with ThreadPoolExecutor(max_workers=1) as pool:
+                        frames = await loop.run_in_executor(
+                            pool, compute_pf_sync, filename, use_correction
+                        )
+
+                    for key in ['est_x', 'est_y', 'est_theta', 'particles_x', 'particles_y']:
+                        pf_playback[key].clear()
+                        pf_playback[key].extend(frames[key])
+                    pf_playback['frame'] = 0
+                    pf_playback['use_correction'] = use_correction
+                    pf_tab_state['offline_running'] = True
+                    offline_pf_status_label.text = f"Playing {len(pf_playback['est_x'])} frames..."
+                    pf_playback['timer'] = ui.timer(0.05, advance_pf_frame)
+
+                except Exception as e:
+                    import traceback
+                    print(traceback.format_exc())
+                    offline_pf_status_label.text = f'Error: {str(e)}'
+                    ui.notify(f'Error: {str(e)}', type='negative')
+                    pf_tab_state['offline_running'] = False
+                finally:
+                    run_offline_pf_button.props(remove='disable')
+
+            run_offline_pf_button.on_click(run_offline_pf)
+
+    def update_online_pf_plot():
+        try:
+            pf = robot_instance.particle_filter
+            mean = pf.particle_set.mean_state
+            x_est = mean.x
+            y_est = mean.y
+            theta = mean.theta
+            pf_tab_state['online_trail_x'].append(x_est)
+            pf_tab_state['online_trail_y'].append(y_est)
+            with online_pf_plot:
+                fig = online_pf_plot.fig
+                fig.patch.set_facecolor('black')
+                plt.clf()
+                plt.style.use('dark_background')
+                ax = fig.gca()
+                from robot_python_code import particle_filter as pf_module
+                pf_map = pf_module.Map(parameters.wall_corner_list)
+                for wall in pf_map.wall_list:
+                    ax.plot([wall.corner1.x, wall.corner2.x],
+                            [wall.corner1.y, wall.corner2.y], 'w-', linewidth=1.5)
+                px = [p.state.x for p in pf.particle_set.particle_list]
+                py = [p.state.y for p in pf.particle_set.particle_list]
+                ax.plot(px, py, 'g.', markersize=3, alpha=0.5, label='Particles')
+
+                # PF confidence from covariance
+                if len(px) >= 2:
+                    cov_xy = np.cov(np.array([px, py]))
+                    eigvals, eigvecs = np.linalg.eigh(cov_xy)
+                    eigvals = np.maximum(eigvals, 0)
+                    order = eigvals.argsort()[::-1]
+                    eigvals = eigvals[order]
+                    eigvecs = eigvecs[:, order]
+                    angle_deg = np.degrees(np.arctan2(eigvecs[1, 0], eigvecs[0, 0]))
+
+                    width = 2 * 2.0 * np.sqrt(eigvals[0])
+                    height = 2 * 2.0 * np.sqrt(eigvals[1])
+
+                    conf_ellipse = Ellipse(
+                        (x_est, y_est),
+                        width=width,
+                        height=height,
+                        angle=angle_deg,
+                        edgecolor='yellow',
+                        facecolor='none',
+                        linewidth=1.5,
+                        linestyle='--',
+                        label='PF 2 sigma ellipse',
+                        zorder=5,
+                    )
+                    ax.add_patch(conf_ellipse)
+
+                if len(pf_tab_state['online_trail_x']) > 1:
+                    ax.plot(pf_tab_state['online_trail_x'],
+                            pf_tab_state['online_trail_y'],
+                            'r-', alpha=0.4, linewidth=1, label='PF Trail')
+                ax.plot(x_est, y_est, 'ro', markersize=8, label='PF Mean', zorder=6)
+                ax.annotate('',
+                            xy=(x_est + 0.15 * math.cos(theta), y_est + 0.15 * math.sin(theta)),
+                            xytext=(x_est, y_est),
+                            arrowprops=dict(arrowstyle='->', color='green', lw=2), zorder=7)
+                ax.set_xlim(pf_map.plot_range[0], pf_map.plot_range[1])
+                ax.set_ylim(pf_map.plot_range[2], pf_map.plot_range[3])
+                ax.set_xlabel('X (m)')
+                ax.set_ylabel('Y (m)')
+                ax.set_title('Live PF')
+                ax.legend(loc='upper right', fontsize=8)
+                ax.grid(True, alpha=0.3)
+                plt.draw()
+        except Exception:
+            pass
+
     def update_online_ekf_plot():
         try:
             ekf = robot_instance.extended_kalman_filter
@@ -920,10 +1314,12 @@ def main_page():
         cmd_speed, cmd_steering_angle = update_commands()
         robot_instance.control_loop(cmd_speed, cmd_steering_angle, logging_switch.value)
         encoder_count_label.set_text(robot_instance.robot_sensor_signal.encoder_counts)
-        # update_lidar_data()
-        # show_lidar_plot()
+        #TODO: show on main page, video left, lidar right
+        update_lidar_data()
+        show_lidar_plot()
         update_video(video_image)
         update_online_ekf_plot()
+        update_online_pf_plot()
 
     ui.timer(0.1, control_loop)
 
@@ -951,15 +1347,3 @@ if __name__ in {"__main__", "__mp_main__"}:
            favicon=str(favicon_path) if favicon_path else None)
 
     main()
-
-
-
-
-
-
-
-
-
-
-
-

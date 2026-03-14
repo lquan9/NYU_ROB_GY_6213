@@ -4,14 +4,14 @@ from pathlib import Path
 import math
 import numpy as np
 
-# ── Network ───────────────────────────────────────────────────────
-localIP     = "192.168.0.195"
+#  Network
+localIP     = "192.168.0.200"
 arduinoIP   = "192.168.0.198"
 localPort   = 4010
 arduinoPort = 4010
 bufferSize  = 1024
 
-# ── Camera ────────────────────────────────────────────────────────
+# Camera 
 camera_id     = 0
 camera_source = None   # set to MJPEG URL string if using a network cam
 marker_length = 0.15   # 150mm marker, 6x6 ArUco, ID 0
@@ -45,7 +45,19 @@ def camera_to_world(camera_signal):
 # def calibrate_camera_transform(world_0, cam_0, world_1, cam_1, world_2, cam_2):
 #     """Compute camera_A, camera_b, and camera_theta_offset from THREE calibration points.
 
-#         >>> from robot_python_code import parameters        >>> parameters.calibrate_camera_transform(
+#     Using 3 points solves the full affine transform — no manual axis negation needed.
+#     Choose points with BOTH x and y displacement, e.g.:
+#         point 0: (0, 0)
+#         point 1: (0.5, 0)    ← x displacement
+#         point 2: (0, 0.5)    ← y displacement
+
+#     Args:
+#         world_N: [x, y]       known world position
+#         cam_N:   [tx, ty, rz] camera raw reading (divide "Camera raw" by 100)
+
+#     Example:
+#         >>> from robot_python_code import parameters
+#         >>> parameters.calibrate_camera_transform(
 #         ...     [0, 0],     [tx0, ty0, rz0],
 #         ...     [0.5, 0],   [tx1, ty1, rz1],
 #         ...     [0, 0.5],   [tx2, ty2, rz2])
@@ -106,16 +118,16 @@ num_robot_control_signals = 2  # speed, steering
 #    Logging 
 DEBUG_PRINTS             = False
 max_num_lines_before_write = 50
-datapath = Path(__file__).resolve().parent.parent.parent / 'data' / 'data_straight' / 'Lab3'
+datapath = Path(__file__).resolve().parent.parent.parent / 'data' / 'data_straight' / 'btf'
 data_name_list = ['time', 'control_signal', 'robot_sensor_signal',
                   'camera_sensor_signal', 'state_mean', 'state_covariance']
 
 #    Trial 
 trial_type          = "steering"   # "steering" or "distance"
 extra_trial_log_time = 2000        # ms
-trial_max_speed     = 40
-trial_time          = 5000         # ms
-trial_input         = 10         # delta for steering, u_x for distance
+trial_max_speed     = 50
+trial_time          = 7000         # ms
+trial_input         = -5         # delta for steering, u_x for distance
 
 #    Motion model 
 counts_to_m          = 3518
@@ -136,3 +148,70 @@ steering_scale_right = 0.7     # start here, tune up/down until right≈left rad
 #    Kalman filter 
 I3                   = np.eye(3)
 covariance_plot_scale = 100
+
+# Particle filter parameters
+num_particles = 100
+# lidar measurement noise variance in meters squared (used by PF weighting)
+distance_variance = 0.1
+
+
+# Defaults for PF lidar calibration helper in the GUI
+lidar_calibration_known_distance_m = 1.0
+lidar_calibration_min_distance_m = 0.05
+lidar_calibration_max_distance_m = 10.0
+
+pf_known_start = True
+pf_start_x = 0.0
+pf_start_y = 0.0
+pf_start_theta = 0.0
+pf_start_stdev = 0.1
+
+
+# wall_corner_list = [
+#     [0.6096, 1.8288, 0, 1.8288],
+#     [0, 1.8288, 0, 0],
+#     [0, 0, 1.8288, 0],
+#     [1.8288, 0, 1.8288, -0.4826],
+#     [1.8288, -0.4826, 2.794, -0.4826],
+#     [2.794, -0.4826, 2.794, 0],
+#     [2.794, 0, 3.6576, 0],
+#     [3.6576, 0, 3.6576, 1.8288],
+#     [3.6576, 1.8288, 3.2004, 2.2352],
+#     [3.2004, 2.2352, 3.2004, 2.9718],
+#     [3.2004, 2.9718, 0.762, 2.9718],
+#     [0.762, 2.9718, 0.6096, 1.8288]
+# ]
+
+
+wall_corner_list = [
+    [0.6096, 1.8288, 0, 1.8288],
+    [0, 1.8288, 0, 0],
+    [0, 0, 1.8288, 0],
+    [1.8288, 0, 1.8288, -0.4826],
+    [1.8288, -0.4826, 2.794, -0.4826],
+    [2.794, -0.4826, 2.794, 0],
+    [2.794, 0, 3.6576, 0],
+    [3.6576, 0, 3.6576, 1.8288],
+    [3.6576, 1.8288, 3.2004, 2.2352],
+    [3.2004, 2.2352, 3.2004, 2.9718],
+    [3.2004, 2.9718, 0.762, 2.9718],
+    [0.762, 2.9718, 0.6096, 1.8288],
+
+    # 5-inch square #1
+    [1.8288, 1.2192, 1.6997, 1.2192],
+    [1.6997, 1.2192, 1.6997, 1.3487],
+    [1.6997, 1.3487, 1.8288, 1.3487],
+    [1.8288, 1.3487, 1.8288, 1.2192],
+
+    # 5-inch square #2
+    [1.2192, 1.8288, 1.3487, 1.8288],
+    [1.3487, 1.8288, 1.3487, 1.9597],
+    [1.3487, 1.9597, 1.2192, 1.9597],
+    [1.2192, 1.9597, 1.2192, 1.8288],
+
+    # 8-inch square
+    [2.4384, 0.6096, 2.642, 0.6096],
+    [2.642, 0.6096, 2.642, 0.4063],
+    [2.642, 0.4063, 2.4384, 0.4063],
+    [2.4384, 0.4063, 2.4384, 0.6096]
+]

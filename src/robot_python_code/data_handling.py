@@ -1,6 +1,8 @@
 """Data handling"""
 # External Libraries
 import math
+import pickle
+import sys
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,49 +10,38 @@ import matplotlib.pyplot as plt
 # Local libraries
 from robot_python_code import motion_models, robot, parameters
 
-def get_file_data(filename):
-    """ Open a file and return data in a form ready to plot"""
+
+def _safe_load_pickle(filename):
     data_loader = robot.DataLoader(filename)
     data_dict = data_loader.load()
+    return data_dict
+
+
+def get_file_data(filename):
+    data_dict = _safe_load_pickle(filename)
 
     # The dictionary should have keys ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']
     time_list = data_dict['time']
     control_signal_list = data_dict['control_signal']
     robot_sensor_signal_list = data_dict['robot_sensor_signal']
-    camera_sensor_signal_list = data_dict['camera_sensor_signal']
-    
+
     encoder_count_list = []
     velocity_list = []
     steering_angle_list = []
-    measured_steering_list = []
-    x_camera_list = []
-    y_camera_list = []
-    z_camera_list = []
-    yaw_camera_list = []
 
     if parameters.DEBUG_PRINTS:
         print(f"Data dict keys: {data_dict.keys()}")
         print(f"Number of sensor signals: {len(robot_sensor_signal_list)}")
-        print(f"First sensor signal type: {type(robot_sensor_signal_list[0])}")
-        if hasattr(robot_sensor_signal_list[0], '__dict__'):
-            print(f"First sensor signal attributes: {robot_sensor_signal_list[0].__dict__}")
 
     for row in robot_sensor_signal_list:
         encoder_count_list.append(row.encoder_counts)
-        measured_steering_list.append(row.steering)
     for row in control_signal_list:
         velocity_list.append(row[0])
         steering_angle_list.append(row[1])
-    for row in camera_sensor_signal_list:
-        x_camera_list.append(row[0])
-        y_camera_list.append(row[1])
-        z_camera_list.append(row[2])
-        yaw_camera_list.append(row[5])
 
     if parameters.DEBUG_PRINTS:
         print(f"Encoder from sensors: {encoder_count_list[:5]} ... {encoder_count_list[-3:]}")
-        print(f"Measured steering from sensors: {measured_steering_list[:5]} ... {measured_steering_list[-3:]}")
-        print(f"Commanded steering from controls: {steering_angle_list[:5]} ... {steering_angle_list[-3:]}")
+        print(f"Commanded steering: {steering_angle_list[:5]} ... {steering_angle_list[-3:]}")
 
     return time_list, encoder_count_list, velocity_list, steering_angle_list
 
@@ -59,12 +50,11 @@ def get_trial_files(trial_data_dir):
     trial_path = Path(trial_data_dir)
     if not trial_path.exists():
         return []
-    return sorted(str(path) for path in trial_path.glob('robot_data_*.pkl'))
+    return sorted(str(path) for path in trial_path.glob('*.pkl'))
 
 # Open a file and return data in a form ready to plot
 def get_file_data_for_kf(filename):
-    data_loader = robot.DataLoader(filename)
-    data_dict = data_loader.load()
+    data_dict = _safe_load_pickle(filename)
 
     # The dictionary should have keys ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']
     time_list = data_dict['time']
@@ -102,6 +92,68 @@ def normalize_time(time_list):
             time_normalized = [t / 1000.0 for t in time_normalized]
         return time_normalized
     return time_list
+
+# TODO:
+# Open a file and return data in a form ready to plot
+def get_file_data_for_pf(filename):
+    data_dict = _safe_load_pickle(filename)
+
+    # The dictionary should have keys ['time', 'control_signal', 'robot_sensor_signal', 'camera_sensor_signal']
+    time_list = data_dict['time']
+    control_signal_list = data_dict['control_signal']
+    robot_sensor_signal_list = data_dict['robot_sensor_signal']
+    
+    # Pack up what is needed for KF
+    t0 = time_list[0]
+    pf_data = []
+    for i in range(len(time_list)):
+        row = [time_list[i] - t0, control_signal_list[i], robot_sensor_signal_list[i]]
+        pf_data.append(row)
+
+    return pf_data
+
+
+def estimate_lidar_bias_variance_from_pf_file(filename, known_distance_m,
+                                              min_distance_m=0.05,
+                                              max_distance_m=10.0):
+    """Estimate lidar bias and variance from a stationary-distance dataset.
+
+    Args:
+        filename: path to a logged `*.pkl` file.
+        known_distance_m: ground-truth distance to target wall/object in meters.
+        min_distance_m: lower bound to keep valid lidar samples.
+        max_distance_m: upper bound to keep valid lidar samples.
+
+    Returns:
+        dict with measurement count, mean, bias, variance, and std-dev.
+    """
+    pf_data = get_file_data_for_pf(filename)
+    samples = []
+
+    for row in pf_data:
+        signal = row[2]
+        for distance_raw in signal.distances:
+            distance_m = signal.convert_hardware_distance(distance_raw)
+            if min_distance_m <= distance_m <= max_distance_m:
+                samples.append(distance_m)
+
+    if len(samples) == 0:
+        raise ValueError(f"No lidar samples in valid range [{min_distance_m}, {max_distance_m}] for {filename}")
+
+    samples_np = np.array(samples, dtype=float)
+    mean_distance = float(np.mean(samples_np))
+    bias = mean_distance - float(known_distance_m)
+    variance = float(np.var(samples_np))
+
+    return {
+        'filename': str(filename),
+        'num_samples': int(len(samples)),
+        'known_distance_m': float(known_distance_m),
+        'measured_mean_m': mean_distance,
+        'bias_m': bias,
+        'variance_m2': variance,
+        'std_dev_m': float(np.sqrt(variance)),
+    }
 
 def plot_trial_basics(fig, trial_filename):
     """For a given trial, plot the encoder counts, velocities, steering angles"""
@@ -351,7 +403,8 @@ def sample_model(fig, num_samples=200):
     ax = fig.add_subplot(1, 1, 1)
     traj_duration = 10
     for i in range(num_samples):
-        model = motion_models.AckermannMM([0,0,0], 0)
+        # model = motion_models.AckermannMM([0,0,0], 0)
+        model = motion_models.AckermannMM([0,0,0], None, 0)
         traj_x, traj_y, _ = model.generate_simulated_traj(traj_duration)
         ax.plot(traj_x, traj_y, 'k.', markersize=1)
 
@@ -430,38 +483,13 @@ def plot_trial_aggregates(fig, trial_metrics):
 ######### MAIN ########
 
 # Some sample data to test with
-files_and_data = [
-    ['robot_data_60_0_28_01_26_13_41_44.pkl', 67/100], # filename, measured distance in meters
-    ['robot_data_60_0_28_01_26_13_43_41.pkl', 68/100],
-    ['robot_data_60_0_28_01_26_13_37_15.pkl', 113/100],
-    ['robot_data_60_0_28_01_26_13_35_18.pkl', 107/100],
-    ['robot_data_60_0_28_01_26_13_41_10.pkl', 65/100],
-    ['robot_data_60_0_28_01_26_13_42_55.pkl', 70/100],
-    ['robot_data_60_0_28_01_26_13_39_36.pkl', 138/100],
-    ['robot_data_60_0_28_01_26_13_42_19.pkl', 69/100],
-    ['robot_data_60_0_28_01_26_13_36_10.pkl', 109/100],
-    ['robot_data_60_0_28_01_26_13_33_20.pkl', 100/100],
-    ['robot_data_60_0_28_01_26_13_34_28.pkl', 103/100],
-    ]
+files_and_data = []
 
-files_and_data_curve = [
-    ['robot_data_60_10_28_01_26_13_44_28.pkl', 61/100, 31/100],
-    ['robot_data_60_10_28_01_26_13_45_14.pkl', 61/100, 32/100],
-    ['robot_data_60_10_28_01_26_13_45_56.pkl', 61/100, 30/100],
-    ['robot_data_60_10_28_01_26_13_46_26.pkl', 61/100, 31/100],	
-    ['robot_data_60_10_28_01_26_13_47_10.pkl', 62/100, 29/100],
-    ['robot_data_60_10_28_01_26_13_48_25.pkl', 70/100, 106/100],
-    ['robot_data_60_10_28_01_26_13_49_08.pkl', 73/100, 106/100],
-    ['robot_data_60_10_28_01_26_13_50_55.pkl', 73/100, 71/100],
-    ['robot_data_60_10_28_01_26_13_51_34.pkl', 76/100, 69/100],
-    ['robot_data_60_10_28_01_26_13_52_07.pkl', 78/100, 71/100],
-    ['robot_data_60_10_28_01_26_13_52_35.pkl', 76/100, 70/100],
-    ['robot_data_60_10_28_01_26_13_53_08.pkl', 76/100, 71/100],
-]
+files_and_data_curve = []
 
 # Plot the motion model predictions for a single trial
 if False:
-    filename = './data_straight/robot_data_60_0_28_01_26_13_36_10.pkl'
+    filename = ''
     run_my_model_on_trial(filename)
 
 # Plot the motion model predictions for each trial in a folder
@@ -484,7 +512,7 @@ if False:
 
 # Try to load some camera data from a single trial
 if False:
-    filename = './data/robot_data_68_0_06_02_26_17_12_19.pkl'
+    filename = ''
     time_list, encoder_count_list, velocity_list, steering_angle_list, x_camera_list, y_camera_list, z_camera_list, yaw_camera_list= get_file_data(filename)
 
     wheel_radius = 0.034 #cm
@@ -497,4 +525,4 @@ if False:
     plt.plot(time_list, y_list, 'b') 
     plt.plot(time_list, z_list, 'c') 
     plt.legend(['Encoder s','x','y','z'])
-    plt.show()   
+    plt.show()
